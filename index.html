@@ -669,7 +669,7 @@ body.light-bg #hub::before,body.light-bg #mini::before{background:rgba(255,255,2
 .np-t{font-size:20px;font-weight:800;line-height:1.3;color:var(--tx);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-all}
 .np-s{margin-top:3px;font-size:12.5px;color:var(--sub);font-variant-numeric:tabular-nums}
 /* 迷你条：正在播放 */
-#mini{position:fixed;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);width:min(calc(100% - 24px),380px);height:66px;display:flex;align-items:center;gap:10px;padding:0 10px;
+#mini{position:fixed;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 4px);width:min(calc(100% - 24px),380px);height:66px;display:flex;align-items:center;gap:10px;padding:0 10px;
   border-radius:24px;z-index:6;color:var(--tx);cursor:pointer;-webkit-tap-highlight-color:transparent;scale:1;transition:scale .7s var(--spring)}
 #mini:active{scale:.97;transition:scale .12s cubic-bezier(.2,.8,.3,1)}
 #mini::before{content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;pointer-events:none;background:rgba(34,34,40,.62);
@@ -695,7 +695,7 @@ body.light-bg #hback,body.light-bg #hzoom{color:#151515;background:rgba(255,255,
   opacity:0;visibility:hidden;pointer-events:none;scale:.7;transition:scale .25s ease,opacity .2s ease,visibility 0s linear .25s}
 body.open #hback{opacity:1;visibility:visible;pointer-events:auto;scale:1;transition:scale .7s var(--spring),opacity .22s ease,visibility 0s}
 #hback svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
-#hzoom{left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);height:46px;padding:0 20px;border-radius:18px;font-size:16px;font-weight:800;z-index:6;scale:1;transition:scale .7s var(--spring)}
+#hzoom{left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 82px);height:46px;padding:0 20px;border-radius:18px;font-size:16px;font-weight:800;z-index:6;scale:1;transition:scale .7s var(--spring)}
 #hzoom:active{scale:.9;transition:scale .12s cubic-bezier(.2,.8,.3,1)}
 /* 装饰线 */
 .deco{position:fixed;z-index:2;pointer-events:none;color:rgba(255,255,255,.6)}
