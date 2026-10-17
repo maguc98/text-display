@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>文字显示器</title>
-<meta name="app-version" content="V1.0.3">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="文字显示器">
@@ -557,7 +556,7 @@ body.light-bg .gh{color:#151515}
 #tlLens .ndl{background:linear-gradient(180deg,#fff,rgba(255,255,255,.7))}
 
 /* ===== 全局模糊：滑杆把手 / 开关 / 底栏把手 / 分段把手 / 按钮 统一高斯玻璃 ===== */
-:root{--gb:14px}
+:root{--gb:40px}
 body.gblur{--g-gauss:blur(var(--gb)) saturate(1.6) brightness(1.08)}
 body.gblur #tlLens,body.gblur .lg-thumb,body.gblur .lg-thumb.press,
 body.gblur .glide::before,body.gblur .glide.pressing::before,
@@ -604,7 +603,6 @@ body.gblur .rw>input[type=range]::-moz-range-thumb{background:transparent;box-sh
 </style>
 </head>
 <body>
-    <div id="verBadge" style="position:fixed;top:8px;left:8px;z-index:9999;font-size:10px;color:rgba(255,255,255,.55);background:rgba(0,0,0,.45);padding:2px 7px;border-radius:10px;pointer-events:none;font-family:-apple-system,sans-serif">V1.0.3</div>
 <div id="amb"></div>
 <div id="pgbg"></div>
 <div class="app">
@@ -753,6 +751,18 @@ body.gblur .rw>input[type=range]::-moz-range-thumb{background:transparent;box-sh
             <div class="qtip">按词断行：英文单词不拆开、标点不落行首；均衡断行：各行长度尽量接近。</div>
           </div></div></div>
         </div>
+        <div class="grp open">
+          <button class="gh" type="button" aria-expanded="true"><span>数据备份</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="gb"><div class="gi"><div class="gp">
+            <div class="row" style="margin-top:0">
+              <button class="chip" id="expBtn" type="button" style="flex:1;padding:11px 0"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>导出项目</button>
+              <button class="chip" id="impBtn" type="button" style="flex:1;padding:11px 0"><svg viewBox="0 0 24 24"><path d="M12 16V5M7 9l5-5 5 5M5 20h14"/></svg>导入项目</button>
+            </div>
+            <input type="file" id="impFile" accept="application/json,.json" class="hide">
+            <div class="qtip">内容会自动保存在本机。iOS 可能清理网页数据，建议定期导出备份。</div>
+            <div class="qtip" id="bkTime" style="margin-top:2px"></div>
+          </div></div></div>
+        </div>
       </div>
 
       <div class="pg hide" id="pg4">
@@ -788,9 +798,12 @@ body.gblur .rw>input[type=range]::-moz-range-thumb{background:transparent;box-sh
         <label class="chk"><input type="checkbox" id="gblurOn"> 全局模糊</label>
         <label class="chk"><input type="checkbox" id="qdemo"> 开关试玩</label>
       </div>
-      <div class="qh" style="margin-top:14px"><b>模糊强度</b><em id="gbv" class="av">14px</em></div>
-      <div class="qr"><span>0</span><input type="range" id="gbamp" min="0" max="40" value="14" aria-label="模糊强度"><span>40</span></div>
+      <div class="hide">
+      <div class="qh" style="margin-top:14px"><b>模糊强度</b><em id="gbv" class="av">40px</em></div>
+      <div class="qr"><span>0</span><input type="range" id="gbamp" min="0" max="40" value="40" aria-label="模糊强度"><span>40</span></div>
+      </div>
       <div class="qd"><span class="qtip">松手后会自动拨一下「开关试玩」；作用于按钮、开关、滑块和折叠动画。</span><button class="chip" id="qrst" type="button">恢复默认</button></div>
+      <div class="qtip" style="text-align:center;margin-top:12px">版本 v0.0.1 beta2</div>
     </div>
     <div id="cbar">
       <div class="well"></div>
@@ -1456,6 +1469,19 @@ list().forEach(function(c){grow(area(c))});commit(true);
   var w=box.clientWidth;if(w===_cw)return;_cw=w;
   list().forEach(function(c){grow(area(c))})
 }).observe(box)}
+  window.__setCards=function(its){
+    var arr=its&&its.length?its:[{t:""}];
+    box.innerHTML="";
+    var fr=document.createDocumentFragment();
+    arr.forEach(function(x){
+      var c=make(x.t||""),o=c._o;
+      o.size=x.size==null?null:x.size;o.color=x.color==null?null:x.color;o.mode=x.mode==null?null:x.mode;o.dur=x.dur==null?null:x.dur;
+      fr.appendChild(c);
+    });
+    box.appendChild(fr);
+    list().forEach(function(c){grow(area(c));paintCfg(c)});
+    commit(true);
+  };
 })();
 var _fsAnimating = false; // 防止用户快速连点导致动画卡死
 
@@ -1849,7 +1875,7 @@ $("wellOn").addEventListener("change",function(){
   on.addEventListener("change",function(){apply(1)});
   rg.addEventListener("input",function(){apply(1)});
   rg.addEventListener("change",function(){var d=$("qdemo");d.checked=!d.checked});
-  try{var a=localStorage.getItem("gblur"),b=localStorage.getItem("gb");if(b!==null&&b!=="")rg.value=b;if(a==="1")on.checked=true}catch(_){}
+  try{var a=localStorage.getItem("gblur"),b=localStorage.getItem("gb");if(a==="1")on.checked=true}catch(_){}
   apply(0);
 })();
 
@@ -1906,6 +1932,171 @@ chips($("lyAlign"),[["left","靠左"],["center","居中"],["right","靠右"]],fu
 chips($("lyPos"),[["top","靠上"],["center","居中"],["bottom","靠下"]],function(){return LY.v},function(v){LY.v=v;renderRaf()});
 chips($("lyWrap"),[["fill","挤满断行"],["word","按词断行"],["balance","均衡断行"]],function(){return LY.w},function(v){LY.w=v;renderRaf()});
 ["lyPad","lyFw","lyLh"].forEach(function(id){$(id).addEventListener("input",renderRaf)});
+/* ---- 自动保存 / 导出 / 导入 ---- */
+(function(){
+  var SK="td_autosave",LOADING=false,touched=false,saveT=0,lastStr="",quotaWarned=false;
+  var G_IDS=["size","tc","fg","sw","sc","shd"],BG_IDS=["solidc","ang","gflow","imgBlur","imgDim"],P_IDS=["speed","aspd"],LY_IDS=["lyPad","lyFw","lyLh"];
+  var SKIP={txt:1,live:1,qdemo:1,qamp:1,wellOn:1,gblurOn:1,gbamp:1,cz:1,file:1,pgFile:1,impFile:1};
+  var STYS=STY.concat(STY2).map(function(e){return e[0]});
+  var MODE_RE=/^(scatter|star|pan|fade|type|bounce|flip|focus|wave|glitch)$/,IMG_RE=/^data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+\/=]+$/i,COL_RE=/^#[0-9a-f]{6}$/i;
+  function p2(n){return (n<10?"0":"")+n}
+  function inList(list,v){return list.indexOf(v)>=0}
+  function num(v,lo,hi){return typeof v==="number"&&isFinite(v)?Math.min(hi,Math.max(lo,v)):null}
+  function okImg(v){return typeof v==="string"&&v.length>30&&IMG_RE.test(v)?v:""}
+  function getV(id){var e=$(id);return !e?null:(e.type==="checkbox"?e.checked:e.value)}
+  function setV(id,v){
+    var e=$(id);if(!e||v==null||!/^(INPUT|SELECT)$/.test(e.tagName)||e.type==="file")return;
+    if(e.type==="checkbox"){e.checked=!!v;return}
+    if(e.type==="color"){if(typeof v==="string"&&COL_RE.test(v))e.value=v;return}
+    if(e.type==="range"){var n=parseFloat(v);if(!isFinite(n))return;e.value=n;sync(e);return}
+    e.value=String(v);
+  }
+  function isQuota(e){return !!e&&(e.name==="QuotaExceededError"||e.name==="NS_ERROR_DOM_QUOTA_REACHED"||e.code===22||e.code===1014)}
+  function stamp(){var el=$("bkTime");if(!el)return;var d=new Date();el.textContent="上次自动保存："+p2(d.getHours())+":"+p2(d.getMinutes())+":"+p2(d.getSeconds())}
+
+  /* 当前全部状态 → 一个可序列化对象 */
+  function snapshot(){
+    var its=window.ITEMS||[],o={app:"text-display",v:1};
+    o.LN=its.map(function(x){return x.t});
+    o.CF=its.map(function(x){return {size:x.size,color:x.color,mode:x.mode,dur:x.dur}});
+    o.G={};G_IDS.forEach(function(id){o.G[id]=getV(id)});o.G.style=style;o.G.theme=theme;
+    o.BG={bgMode:bgMode,imgData:imgData};BG_IDS.forEach(function(id){o.BG[id]=getV(id)});
+    o.LY={a:LY.a,v:LY.v,w:LY.w};LY_IDS.forEach(function(id){o.LY[id]=getV(id)});
+    o.P={};P_IDS.forEach(function(id){o.P[id]=getV(id)});
+    var ui={},skip=G_IDS.concat(BG_IDS,P_IDS,LY_IDS);
+    [].forEach.call(document.querySelectorAll("input[id],select[id]"),function(e){
+      if(SKIP[e.id]||e.type==="file"||inList(skip,e.id))return;
+      ui[e.id]=getV(e.id);
+    });
+    o.X={ui:ui,eIn:eIn,eOut:eOut,pgData:pgData,pgLum:pgLum};
+    return o;
+  }
+
+  function saveData(){
+    clearTimeout(saveT);saveT=0;
+    var o=snapshot(),str=JSON.stringify(o);
+    if(str===lastStr)return true;
+    try{localStorage.setItem(SK,str);lastStr=str;quotaWarned=false;stamp();return true}
+    catch(e){
+      if(isQuota(e)){
+        /* 空间不够：文字和设置照常保存，图片沿用上一次已保存的版本 */
+        try{
+          var old=null;try{old=JSON.parse(localStorage.getItem(SK))}catch(_){}
+          if(old&&old.BG&&old.BG.imgData)o.BG.imgData=old.BG.imgData;else delete o.BG.imgData;
+          if(old&&old.X&&old.X.pgData){o.X.pgData=old.X.pgData;o.X.pgLum=old.X.pgLum}else{delete o.X.pgData;delete o.X.pgLum}
+          localStorage.setItem(SK,JSON.stringify(o));
+        }catch(_){}
+        if(!quotaWarned&&!document.hidden){quotaWarned=true;alert("存储空间不足，请及时导出备份")}
+      }
+      return false;
+    }
+  }
+  function scheduleSave(){if(LOADING)return;touched=true;clearTimeout(saveT);saveT=setTimeout(saveData,500)}
+  function flush(){if(LOADING||!touched)return;saveData()}
+
+  function markBox(id,vals,v){var b=$(id);if(!b)return;[].forEach.call(b.children,function(c,i){c.classList.toggle("on",vals[i]===v)})}
+
+  /* 把一个状态对象恢复到页面上 */
+  function applyState(d){
+    if(!d||typeof d!=="object")return false;
+    var ok=true;LOADING=true;
+    try{
+      var G=d.G||{},BG=d.BG||{},P=d.P||{},L=d.LY||{},X=d.X||{},ui=X.ui||{},skip=G_IDS.concat(BG_IDS,P_IDS,LY_IDS);
+      G_IDS.forEach(function(id){setV(id,G[id])});
+      BG_IDS.forEach(function(id){setV(id,BG[id])});
+      P_IDS.forEach(function(id){setV(id,P[id])});
+      LY_IDS.forEach(function(id){setV(id,L[id])});
+      Object.keys(ui).forEach(function(id){if(SKIP[id]||inList(skip,id))return;setV(id,ui[id])});
+      if(inList(STYS,G.style))style=G.style;
+      var th=parseInt(G.theme,10);if(th>=0&&th<THEMES.length)theme=th;
+      if(inList(["grad","solid","img"],BG.bgMode))bgMode=BG.bgMode;
+      var im=okImg(BG.imgData);if(im)imgData=im;
+      if(inList(["left","center","right"],L.a))LY.a=L.a;
+      if(inList(["top","center","bottom"],L.v))LY.v=L.v;
+      if(inList(["fill","word","balance"],L.w))LY.w=L.w;
+      if(inList(EIN.map(function(e){return e[0]}),X.eIn))eIn=X.eIn;
+      if(inList(EOUT.map(function(e){return e[0]}),X.eOut))eOut=X.eOut;
+      if(typeof X.pgData==="string")pgData=okImg(X.pgData);
+      var pl=num(X.pgLum,0,1);if(pl!==null)pgLum=pl;
+      ASPD=$("aspd").value/100;$("aspdv").textContent=ASPD.toFixed(2)+"×";
+      idx=0;prog=0;bag=null;
+      /* 按钮高亮 / 分区显隐 */
+      markStyles();
+      markBox("themes",THEMES.map(function(t,i){return i}),theme);
+      markBox("bgm",["grad","solid","img"],bgMode);
+      markBox("easeIn",EIN.map(function(e){return e[0]}),eIn);
+      markBox("easeOut",EOUT.map(function(e){return e[0]}),eOut);
+      markBox("lyAlign",["left","center","right"],LY.a);
+      markBox("lyPos",["top","center","bottom"],LY.v);
+      markBox("lyWrap",["fill","word","balance"],LY.w);
+      $("gbox").classList.toggle("hide",bgMode!=="grad");
+      $("solidbox").classList.toggle("hide",bgMode!=="solid");
+      $("ibox").classList.toggle("hide",bgMode!=="img");
+      /* 卡片：文字 LN + 单条设置 CF */
+      if(Array.isArray(d.LN)&&window.__setCards){
+        var cf=Array.isArray(d.CF)?d.CF:[],items=[];
+        d.LN.forEach(function(t,i){
+          var c=cf[i]&&typeof cf[i]==="object"?cf[i]:{};
+          items.push({t:String(t==null?"":t),size:num(c.size,14,80),color:typeof c.color==="string"&&COL_RE.test(c.color)?c.color:null,
+            mode:typeof c.mode==="string"&&MODE_RE.test(c.mode)?c.mode:null,dur:num(c.dur,.5,20)});
+        });
+        window.__setCards(items);
+      }
+    }catch(e){ok=false;try{console.error(e)}catch(_){}}
+    try{applyPg();refreshAll()}catch(e){ok=false;try{console.error(e)}catch(_){}}
+    LOADING=false;
+    return ok;
+  }
+
+  function loadData(){
+    var raw=null;try{raw=localStorage.getItem(SK)}catch(_){return false}
+    if(!raw)return false;
+    var d=null;try{d=JSON.parse(raw)}catch(_){return false}
+    return applyState(d);
+  }
+
+  /* 导出 */
+  function exportData(){
+    var o=snapshot();o.time=new Date().toISOString();
+    var blob=new Blob([JSON.stringify(o)],{type:"application/json"}),d=new Date(),
+        name="文字显示器备份-"+d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate())+".json",
+        url=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=url;a.download=name;a.style.display="none";
+    document.body.appendChild(a);a.click();
+    setTimeout(function(){if(a.parentNode)a.parentNode.removeChild(a);URL.revokeObjectURL(url)},2000);
+  }
+  /* 导入 */
+  function importFile(f){
+    var r=new FileReader();
+    r.onerror=function(){alert("导入失败：无法读取这个文件")};
+    r.onload=function(){
+      var d=null;try{d=JSON.parse(r.result)}catch(_){}
+      if(!d||typeof d!=="object"||(!Array.isArray(d.LN)&&!d.G&&!d.BG)){alert("导入失败：这不是有效的备份文件");return}
+      if(!confirm("导入会覆盖当前所有内容，确定继续吗？"))return;
+      if(!applyState(d)){alert("导入时部分内容无法恢复，请检查备份文件")}
+      touched=true;saveData();
+    };
+    r.readAsText(f);
+  }
+  $("expBtn").onclick=exportData;
+  $("impBtn").onclick=function(){$("impFile").click()};
+  $("impFile").onchange=function(){var f=this.files&&this.files[0];this.value="";if(f)importFile(f)};
+
+  /* 选图 / 删图 不触发 input 事件，单独挂钩 */
+  var _useImg=useImg;useImg=function(cv){_useImg(cv);scheduleSave()};
+  var _applyPg=applyPg;applyPg=function(){_applyPg.apply(this,arguments);scheduleSave()};
+
+  loadData();
+
+  document.addEventListener("input",scheduleSave,true);
+  document.addEventListener("change",scheduleSave,true);
+  function clk(e){var t=e.target;if(t&&t.closest&&t.closest("button,.chip,.seg,.grip,.card"))scheduleSave()}
+  document.addEventListener("click",clk,true);
+  document.addEventListener("pointerup",clk,true);
+  document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden")flush()});
+  window.addEventListener("pagehide",flush);
+  window.saveData=saveData;window.loadData=loadData;
+})();
 </script>
 <script>
 if ('serviceWorker' in navigator) {
