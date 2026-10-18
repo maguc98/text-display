@@ -719,9 +719,9 @@ body.fs #hub,body.fs #mini,body.fs #hback,body.fs #hzoom,body.fs .deco{opacity:0
 .m-poster{--du:1s;--ein:cubic-bezier(.2,.8,.2,1);--duo:.6s}
 .m-poster p{position:absolute;inset:0;margin:0}
 .m-poster .pwd{position:absolute;left:var(--lx);top:var(--ly);font-size:var(--wf);line-height:1.1;white-space:nowrap}
-.m-poster .c.pc{filter:blur(10px);transform:translate(var(--ox,0px),var(--oy,24px)) scale(var(--s0,.92))}
+.m-poster .c.pc{filter:blur(var(--bl,10px));transform:translate(var(--ox,0px),var(--oy,24px)) scale(var(--s0,.92))}
 .one.m-poster.in .c{opacity:var(--wo,1);filter:none;transform:none}
-.one.m-poster.out .c{transform:translate(calc(var(--ox2,0px)*1.6),calc(var(--oy2,-20px)*1.8)) scale(1.06);filter:blur(10px);opacity:0}
+.one.m-poster.out .c{transform:translate(calc(var(--ox2,0px)*1.6),calc(var(--oy2,-20px)*1.8)) scale(var(--s2,1.06));filter:blur(6px);opacity:0}
 .pdeco{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
 .ps{opacity:0;transform-box:fill-box;transform-origin:center;transform:scale(.55) rotate(var(--rot0,0deg));
   transition:opacity 1s ease var(--dl,0s),transform 1.3s cubic-bezier(.2,.8,.2,1) var(--dl,0s);
@@ -737,6 +737,55 @@ body.fs #hub,body.fs #mini,body.fs #hback,body.fs #hzoom,body.fs .deco{opacity:0
 .one.out .pl{opacity:0;transition:opacity .6s ease}
 @keyframes pfloat{to{translate:var(--fx,0px) var(--fy,0px)}}
 #stage.paused .ps{animation-play-state:paused}
+
+/* ===== Sonnet 强化层 ===== */
+#one .m-poster .cam{
+  position:absolute;inset:0;
+  transform-origin:50% 50%;
+  will-change:transform;
+  /* 不要 animation，不要 transition，位置完全由 JS 弹簧控制 */
+}
+
+#one .m-poster .gauge,#one .m-poster .pdeco{will-change:transform;transform:translateZ(0)}  /* 各自独立图层：它们的无限动画重绘不会连带重绘整张文字层 */
+#one .m-poster .gauge{
+  position:absolute;inset:0;width:100%;height:100%;
+  pointer-events:none;overflow:visible;
+  z-index:2;
+  opacity:0;transition:opacity 1s ease .1s;
+}
+#one .m-poster.in .gauge{opacity:1}
+#one .m-poster.out .gauge{opacity:0;transition:opacity .5s ease}
+@keyframes gaugePulse{
+  0%,100%{ stroke-opacity:.4; }
+  50%    { stroke-opacity:.9; }
+}
+}
+#stage.paused #one .m-poster .gauge path{ animation-play-state:paused!important; }
+
+#one .m-poster .vig{
+  position:absolute;inset:0;pointer-events:none;z-index:9;
+  background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,0) 30%,rgba(0,0,0,0.55) 100%);
+  mix-blend-mode:multiply;
+  transition:opacity .6s ease;
+}
+#one .m-poster .noise{
+  position:absolute;inset:0;pointer-events:none;z-index:10;
+  opacity:0.55;
+  background-size:96px 96px;background-repeat:repeat;
+  mix-blend-mode:overlay;
+  transition:opacity .6s ease;
+}
+/* 旧句淡出时，暗角/噪点一并淡出，避免与新句叠加变暗 */
+#one .m-poster.out .vig,#one .m-poster.out .noise{opacity:0}
+
+/* Safari fallback：如果 mix-blend-mode 导致画面发黑，加载时检测后切换 */
+#one .m-poster .vig.noblend{ mix-blend-mode:normal; }
+#one .m-poster .noise.noblend{ mix-blend-mode:normal; opacity:0.35; }
+#one .m-poster.out .noise.noblend{opacity:0}
+
+#one .m-poster .camframe{position:absolute;border:1px dashed rgba(255,255,255,.6);pointer-events:none;z-index:11}
+/* Hero 字：色散边缘 + 主题发光（由 --tsh 提供） */
+#one .m-poster .c.hero{text-shadow:var(--tsh,none)}
 
 /* ===== v0.0.3 深色磨砂面板（参照设计稿：封面 → 标签栏 → 控制键 → 内容）===== */
 :root{--p-bg:rgba(30,30,34,.7);--p-fill:rgba(255,255,255,.07);--p-fill2:rgba(255,255,255,.15);--p-line:rgba(255,255,255,.09);--p-sub:rgba(255,255,255,.58)}
@@ -1106,7 +1155,7 @@ body.light-bg .gpop{background:rgba(255,255,255,.55)}
       <div class="qr"><span>0</span><input type="range" id="gbamp" min="0" max="40" value="40" aria-label="模糊强度"><span>40</span></div>
       </div>
       <div class="qd"><span class="qtip">作用于按钮、开关、滑块和折叠动画。</span><button class="chip" id="qrst" type="button">恢复默认</button></div>
-      <div class="qtip" style="text-align:center;margin-top:12px">版本 v0.1.0 beta3</div>
+      <div class="qtip" style="text-align:center;margin-top:12px">版本 v0.1.0 beta4</div>
     </div>
     <div id="cbar">
       <div class="well"></div>
@@ -1383,18 +1432,23 @@ function posterTimes(U,dur){
   for(j=0;j<N;j++)out[ord[j]]={dl:st+step*j,du:du};
   return out;
 }
+/* 镜头跨句交接：上一句停止时的 cam 位置，新一句从这里继续 */
+if(!window.__posterCam) window.__posterCam = { x: null, y: null, vx: 0, vy: 0 };
 function buildPoster(box,text,dur,cfg){
   var W=stage.clientWidth||390,H=stage.clientHeight||800,R=function(a,b){return a+Math.random()*(b-a)};
   var words=posterWords(text);if(!words.length)words=[String(text||" ")];
   var n=words.length,base=(cfg&&cfg.size)||+$("size").value,K=+$("pdC").value/100;
   var crowd=Math.max(.62,Math.min(1,8/n));
   var order=words.map(function(w,i){return i}).sort(function(a,b){return words[b].length-words[a].length+(Math.random()-.5)*.9});
-  var role=words.map(function(){return 0}),nXL=n>=7?2:1,nMD=Math.max(1,Math.round(n*.28));
+  var role=words.map(function(){return 0}),nXL=n>=7?2:1;
+  var heroLen=0,supportLen=0;
+  words.forEach(function(w,i){if(i===order[0])heroLen+=w.length;else supportLen+=w.length});
+  var nMD=(supportLen>=heroLen*1.8&&n>=4)?Math.max(1,Math.round(n*.15)):0;
   order.forEach(function(wi,k){role[wi]=k<nXL?2:(k<nXL+nMD?1:0)});
   var mx=14,top=64,bot=170,avail=Math.max(200,H-top-bot);
   /* 1. 字号 / 字距 */
   var items=words.map(function(wd,i){
-    var rl=role[i],f=rl===2?(2.5+R(0,.9))*K:(rl===1?(1.2+R(0,.45))*(.7+.3*K):R(.58,.82)),size=Math.max(11,base*f*crowd);
+    var rl=role[i],f=rl===2?(3.5+R(0,1.2))*K:(rl===1?(1.6+R(0,.4))*(.7+.3*K):R(.55,.78)),size=Math.max(11,base*f*crowd);
     var ls=rl===0?R(.32,.55):(rl===1?R(0,.08):0),em=0,cn=[].slice.call(wd).length;
     for(var c of wd)em+=(CJKCH.test(c)?1:.58);
     var maxW=rl===2?W*1.08:W-mx*2,w=(em+cn*ls)*size;if(w>maxW){size*=maxW/w}
@@ -1417,8 +1471,56 @@ function buildPoster(box,text,dur,cfg){
   /* 3. 每个字（单元）的出场时间 */
   var U=[];items.forEach(function(it){pchars(it.wd).forEach(function(){U.push({r:it.rl})})});
   var TT=posterTimes(U,dur);
-  posterDeco(box,W,H,dur);
+
+  /* 镜头容器：文字、装饰、仪表都放在里面，一起被镜头带动 */
+  var cam=document.createElement("div");
+  cam.className="cam";
+  box.appendChild(cam);
+
+  posterDeco(cam,W,H,dur);
+
+  /* 弧形仪表层 */
+  try{
+    var gNS="http://www.w3.org/2000/svg";
+    var gauge=document.createElementNS(gNS,"svg");
+    gauge.setAttribute("class","gauge");
+    gauge.setAttribute("viewBox","0 0 "+W+" "+H);
+    gauge.setAttribute("preserveAspectRatio","none");
+    var gcx=W*0.5,gcy=H*0.42,gr=Math.min(W,H)*0.34;
+    var ring1=document.createElementNS(gNS,"circle");
+    ring1.setAttribute("cx",gcx);ring1.setAttribute("cy",gcy);ring1.setAttribute("r",gr);
+    ring1.setAttribute("fill","none");
+    ring1.setAttribute("stroke","currentColor");
+    ring1.setAttribute("stroke-width","1");
+    ring1.setAttribute("stroke-opacity","0.18");
+    ring1.setAttribute("stroke-dasharray","3 8");
+    gauge.appendChild(ring1);
+    var startA=-Math.PI*0.7,endA=-Math.PI*0.3;
+    var ax1=gcx+Math.cos(startA)*gr,ay1=gcy+Math.sin(startA)*gr;
+    var ax2=gcx+Math.cos(endA)*gr,ay2=gcy+Math.sin(endA)*gr;
+    var arc1=document.createElementNS(gNS,"path");
+    arc1.setAttribute("d","M"+ax1+" "+ay1+" A"+gr+" "+gr+" 0 0 1 "+ax2+" "+ay2);
+    arc1.setAttribute("fill","none");
+    arc1.setAttribute("stroke","currentColor");
+    arc1.setAttribute("stroke-width","2.2");
+    arc1.setAttribute("stroke-linecap","round");
+    arc1.style.animation="gaugePulse 3.6s ease-in-out infinite";
+    gauge.appendChild(arc1);
+    for(var gi=0;gi<5;gi++){
+      var ga=startA+(endA-startA)*(gi/4);
+      var gx=gcx+Math.cos(ga)*gr,gy=gcy+Math.sin(ga)*gr;
+      var dot=document.createElementNS(gNS,"circle");
+      dot.setAttribute("cx",gx);dot.setAttribute("cy",gy);dot.setAttribute("r","2");
+      dot.setAttribute("fill","currentColor");
+      dot.setAttribute("opacity","0.45");
+      gauge.appendChild(dot);
+    }
+    gauge.style.color=((cfg&&cfg.color)||$("tc").value);
+    cam.appendChild(gauge);
+  }catch(e){try{console.error("Gauge failed:",e)}catch(_){}}
+
   var p=document.createElement("p");
+  var focusPoints=[];
   function put(it,x,yy,txt){
     var w=document.createElement("span");
     w.className="pwd "+(it.rl===2?"xl":it.rl===1?"md":"sm");
@@ -1429,14 +1531,42 @@ function buildPoster(box,text,dur,cfg){
       s.className="c pc";s.textContent=ch;
       st("--i",Math.min(k*3,18));
       var rise=Math.max(16,Math.min(56,it.size*.42));
-      st("--ox",R(-8,8).toFixed(0)+"px");st("--oy",(rise*R(.8,1.2)).toFixed(0)+"px");st("--s0",R(.88,.95).toFixed(2));
-      st("--ox2",R(-10,10).toFixed(0)+"px");st("--oy2",(-R(10,24)).toFixed(0)+"px");
+      if(it.rl===2){
+        /* Hero：从大砸入 */
+        st("--ox",R(-6,6).toFixed(0)+"px");
+        st("--oy",R(-10,10).toFixed(0)+"px");
+        st("--s0",R(1.35,1.6).toFixed(2));
+        st("--bl","14px");
+        st("--ein","cubic-bezier(0.16,1,0.3,1)");
+        s.classList.add("hero");
+        /* 色散边缘 + 主题发光 */
+        var glowColor=(cfg&&cfg.color)||$("tc").value;
+        st("--tsh","-1.5px 0 rgba(255,40,90,0.55), 1.5px 0 rgba(0,180,255,0.55), 0 0 20px "+glowColor);
+      }else{
+        st("--ox",R(-8,8).toFixed(0)+"px");
+        st("--oy",(rise*R(.8,1.2)).toFixed(0)+"px");
+        st("--s0",R(.88,.95).toFixed(2));
+      }
+      if(it.rl===2){
+        st("--ox2",R(-6,6).toFixed(0)+"px");
+        st("--oy2",(-R(40,70)).toFixed(0)+"px");
+        st("--s2","1.25");
+      }else{
+        st("--ox2",R(-10,10).toFixed(0)+"px");
+        st("--oy2",(-R(10,24)).toFixed(0)+"px");
+      }
       st("--wo",it.rl===2?".95":(it.rl===1?".9":".8"));
-      st("--dl",t.dl.toFixed(2)+"s");st("--du",t.du.toFixed(2)+"s");
+      st("--dl",t.dl.toFixed(2)+"s");st("--du",(it.rl===2?Math.max(t.du,.55):t.du).toFixed(2)+"s");
       st("--dlo",(Math.min(k,10)*.008+R(0,.02)).toFixed(2)+"s");st("--duo",R(.2,.3).toFixed(2)+"s");
       w.appendChild(s);k++;
     });
     p.appendChild(w);
+    /* 焦点：词块几何中心（split 的两半按字数分摊宽度） */
+    if(it.w && it.w>0){
+      var pw=it.w;
+      if(it.split){pw=it.w/[].slice.call(it.wd).length*[].slice.call(txt).length}
+      focusPoints.push({x:x+pw/2,y:yy+(it.h||it.size*1.15)/2});
+    }
   }
   rows.forEach(function(r){
     var yy=y+R(0,Math.max(0,gapY))*.8;
@@ -1460,7 +1590,199 @@ function buildPoster(box,text,dur,cfg){
     }
     y+=r.h+gapY;
   });
-  box.appendChild(p);
+  cam.appendChild(p);
+
+  /* ===== 弹簧运镜：逐词居中 + 线性牵引 + 欠阻尼过冲（setInterval ~30fps，读全局 prog） ===== */
+  if(focusPoints.length>0){
+    var FN=focusPoints.length,slot=dur/FN;
+    /* 焦点过多（每段 <0.3s）：等间隔降采样，避免镜头抽搐 */
+    if(slot<0.3){
+      var stepF=Math.ceil(0.3/slot),reduced=[];
+      for(var fi=0;fi<FN;fi+=stepF)reduced.push(focusPoints[fi]);
+      focusPoints=reduced;FN=focusPoints.length;slot=dur/FN;
+    }
+    /* ===== 取景框：画面正中央的小矩形（宽 16% × 高 11.5%） =====
+       词块中心只要在框内，镜头目标就不动；超出框时，只移动"刚好让词块回到框边缘"的最小距离。
+       框很小 → 只有相邻焦点几乎重合时才不动，大多数焦点都会让镜头移动一小段。
+       想更小可以把 0.16 / 0.115 继续调低（例如 0.12 / 0.09），想更大就调高。 */
+    var BOXW=W*0.06,BOXH=H*0.04,tgtX=[],tgtY=[],prX=0,prY=0;
+    for(var ti=0;ti<FN;ti++){
+      var fx=focusPoints[ti].x-W/2,fy=focusPoints[ti].y-H/2;
+      var nx=Math.max(fx-BOXW/2,Math.min(fx+BOXW/2,prX)),
+          ny=Math.max(fy-BOXH/2,Math.min(fy+BOXH/2,prY));
+      /* 位移极小就吸附到上一个目标，避免无意义的亚像素抖动 */
+      if(Math.abs(nx-prX)<1.5)nx=prX;
+      if(Math.abs(ny-prY)<1.5)ny=prY;
+      tgtX.push(nx);tgtY.push(ny);prX=nx;prY=ny;
+    }
+
+    /* 如果上一句留下了交接位置，就从那里继续；否则走原来的开场推入 */
+    var camX, camY, camVX=0, camVY=0, handoffOn=false;
+    if(window.__posterCam.x !== null && window.__posterCam.y !== null){
+      camX = window.__posterCam.x;
+      camY = window.__posterCam.y;
+      camVX = window.__posterCam.vx||0;      /* 速度也一起交接：只接位置会让镜头在切句瞬间猛冲 */
+      camVY = window.__posterCam.vy||0;
+      handoffOn = true;
+      /* 交接位置是上一句的 cam 值，不是当前句的目标。
+         新句的弹簧会从交接位置平滑追到 tgtX[0]/tgtY[0]，视觉上就是"镜头接着走"。 */
+    }else{
+      camX = tgtX[0] + W*0.05;
+      camY = tgtY[0] + H*0.025;
+    }
+    /* 交接只用一次：消费掉，避免后续句一直从很旧的位置开始 */
+    window.__posterCam.x = null;
+    window.__posterCam.y = null;
+    window.__posterCam.vx = 0;
+    window.__posterCam.vy = 0;
+    /* 弹簧更紧、阻尼略低：快速跟随连续目标，保留轻微过冲但不震荡 */
+    var SPK=380,ZETA=0.5,SPC=2*ZETA*Math.sqrt(SPK);
+    var lastNow=performance.now(),ct=0,txL=tgtX[0],tyL=tgtY[0];
+    /* 镜头提前量：让镜头比文字早出发，文字出现时镜头已经在动 */
+    var lead=slot*0.35;
+
+    /* Catmull-Rom 样条：镜头目标在焦点之间连续移动，经过每个焦点中心。
+       没有分段停留，速度由相邻焦点距离自然决定——距离大时快，距离小时慢，但不会停。 */
+    function crv(p0,p1,p2,p3,u){
+      /* 低张力 Catmull-Rom（张力 m=0.35，标准是 0.5）：
+         端点仍然精确等于 p1、p2，但相邻控制点之间的过冲被压到 1px 以内，
+         避免删除常数分支后镜头在重复目标之间画出可见的小弧。 */
+      var m=0.35,u2=u*u,u3=u2*u;
+      return (2*u3-3*u2+1)*p1 + (u3-2*u2+u)*(p2-p0)*m
+           + (-2*u3+3*u2)*p2 + (u3-u2)*(p3-p1)*m;
+    }
+    function tgtAt(camCt){
+      var s=camCt/slot;
+      if(s<=0)return[tgtX[0],tgtY[0]];
+      if(s>=FN-1)return[tgtX[FN-1],tgtY[FN-1]];
+      var i=Math.floor(s),u=s-i;
+      var i0=Math.max(0,i-1),i1=i,i2=i+1,i3=Math.min(FN-1,i+2);
+      return[crv(tgtX[i0],tgtX[i1],tgtX[i2],tgtX[i3],u),
+             crv(tgtY[i0],tgtY[i1],tgtY[i2],tgtY[i3],u)];
+    }
+
+    /* 游走：时间的连续函数（camStep 与交接共用） */
+    function driftAt(tt){
+      return[Math.sin(tt*0.65)*12.0+Math.sin(tt*1.73+1.1)*4.0,
+             Math.cos(tt*0.83)*10.0+Math.sin(tt*1.41+0.6)*3.5];
+    }
+    /* 跨句交接缓动：
+       只把位置交给新句，弹簧会在切句瞬间被"新目标离得很远"猛拽（速度突变、冲刺）。
+       这里改成：新目标 = 新句样条 + 一个"交接偏移"，偏移按临界阻尼曲线衰减到 0。
+       偏移的初值/初速度按"镜头此刻的位置与速度"反推，所以切句瞬间镜头的位置、速度、受力都连续，
+       之后平滑过渡到新句第一个焦点。HOT 是衰减时间常数（秒）：越小越快到位，越大越缓。 */
+    var HOT=0.25,hoOX=0,hoOY=0,hoVX=0,hoVY=0,hoT=0;
+    if(handoffOn){
+      var h0=performance.now()*0.001,he=0.03;
+      var g0=tgtAt(lead),g1=tgtAt(lead+he),d0=driftAt(h0),d1=driftAt(h0+he);
+      var lagK=SPC/SPK;     /* 弹簧稳态跟随滞后：匀速 v 时 cam 落后目标 v*SPC/SPK */
+      hoOX=camX+camVX*lagK-(g0[0]+d0[0]);
+      hoOY=camY+camVY*lagK-(g0[1]+d0[1]);
+      hoVX=camVX-((g1[0]+d1[0])-(g0[0]+d0[0]))/he;
+      hoVY=camVY-((g1[1]+d1[1])-(g0[1]+d0[1]))/he;
+    }
+
+    cam.style.transform="translate3d("+(-camX).toFixed(2)+"px,"+(-camY).toFixed(2)+"px,0)";
+    var camRaf=0;
+    function camStep(){
+      if(!box.parentNode)return;
+      var finishing=(box!==window.cur)||box.classList.contains("out");
+      var now=performance.now(),dt=Math.min(0.034,(now-lastNow)/1000);
+      lastNow=now;
+      camRaf=requestAnimationFrame(camStep);
+
+      /* 1) 推进播放时间（只在播放中且非收尾） */
+      if(playing&&!finishing){
+        ct+=dt;
+        ct+=(prog*dur-ct)*Math.min(1,dt*6);
+      }
+
+      /* 2) 目标 = 样条位置 + 永不为零的低频游走。
+            游走是时间的连续函数，与播放状态无关——即使样条冻结（取景框内、最后一段、暂停），
+            游走仍在变，镜头永远在动。
+            幅度：水平 sin(0.65t)×5 + sin(1.73t)×2.5 ≈ 最大 7.5px
+                  垂直 cos(0.83t)×4 + sin(1.41t)×2.0 ≈ 最大 6.0px
+            周期 3.6–9.7 秒，两个不同频率叠加，是缓慢自然的"手持感"，不是抖动。 */
+      var camCt=ct+lead;
+      var tg=tgtAt(camCt);
+      var tt=now*0.001;
+      var dr=driftAt(tt);
+      txL=tg[0]+dr[0];tyL=tg[1]+dr[1];
+      if(handoffOn){
+        /* 交接偏移：(a+b·t)·e^(−t/HOT)，临界阻尼衰减，初值与初速度见上 */
+        hoT+=dt;
+        var hoE=Math.exp(-hoT/HOT);
+        txL+=(hoOX+(hoVX+hoOX/HOT)*hoT)*hoE;
+        tyL+=(hoOY+(hoVY+hoOY/HOT)*hoT)*hoE;
+        if(hoT>4)handoffOn=false;
+      }
+
+      /* 3) 弹簧步进：始终执行（暂停时也追扰动目标，所以暂停时镜头仍在缓慢游走） */
+      for(var rem=dt;rem>1e-6;){
+        var h=Math.min(rem,1/240);rem-=h;
+        camVX+=(-SPK*(camX-txL)-SPC*camVX)*h;
+        camVY+=(-SPK*(camY-tyL)-SPC*camVY)*h;
+        camX+=camVX*h;camY+=camVY*h;
+      }
+      cam.style.transform="translate3d("+(-camX).toFixed(2)+"px,"+(-camY).toFixed(2)+"px,0)";
+
+      /* 4) 收尾：切句/出场且弹簧已静止时才停止 RAF（旧 box 即将移除，合理停止） */
+      if(finishing&&Math.abs(camVX)+Math.abs(camVY)<0.5&&Math.abs(camX-txL)+Math.abs(camY-tyL)<0.3){
+        /* 兜底：即使 update() 没及时快照，停止时也把位置留给下一句 */
+        window.__posterCam.x = camX;
+        window.__posterCam.y = camY;
+        window.__posterCam.vx = camVX;
+        window.__posterCam.vy = camVY;
+        cancelAnimationFrame(camRaf);camRaf=0;
+      }
+    }
+    /* 暴露当前 cam 位置：update() 切句时用这个快照做交接 */
+    box._posterCamSnapshot = function(){ return { x: camX, y: camY, vx: camVX, vy: camVY }; };
+    camRaf=requestAnimationFrame(camStep);
+    box._posterCamCleanup=function(){cancelAnimationFrame(camRaf)};
+  }
+
+  /* 暗角层（在 cam 外） */
+  try{
+    var vig=document.createElement("div");
+    vig.className="vig";
+    box.appendChild(vig);
+  }catch(e){}
+
+  /* 噪点层（在 cam 外；DataURL 全局只生成一次并缓存） */
+  try{
+    if(!window._pNoiseUrl){
+      var nz=document.createElement("canvas");
+      nz.width=96;nz.height=96;
+      var nctx=nz.getContext("2d");
+      if(nctx){
+        var nid=nctx.createImageData(96,96);
+        var nd=nid.data;
+        for(var ni=0;ni<nd.length;ni+=4){
+          var nv=Math.random()*255|0;
+          nd[ni]=nv;nd[ni+1]=nv;nd[ni+2]=nv;nd[ni+3]=22;
+        }
+        nctx.putImageData(nid,0,0);
+        window._pNoiseUrl=nz.toDataURL("image/png");
+      }
+    }
+    if(window._pNoiseUrl){
+      var nzdiv=document.createElement("div");
+      nzdiv.className="noise";
+      nzdiv.style.backgroundImage="url('"+window._pNoiseUrl+"')";
+      box.appendChild(nzdiv);
+    }
+  }catch(e){}
+
+  /* Safari blend-mode 兼容检测：不支持则改为普通叠加 */
+  try{
+    var supportsBlend=(window.CSS&&CSS.supports&&CSS.supports("mix-blend-mode","overlay"));
+    if(!supportsBlend){
+      var vv=box.querySelector(".vig"),nn=box.querySelector(".noise");
+      if(vv)vv.classList.add("noblend");
+      if(nn)nn.classList.add("noblend");
+    }
+  }catch(e){}
 }
 /* 出场时间选项：视频节奏 / 随机 / 自定义 */
 function pdMarkSeg(boxId,hid,list){
@@ -1476,7 +1798,20 @@ function pdSync(){
 }
 function update(){
   var m=modeOf(idx),pan=m==="pan",cfg=cfgOf(idx),dur=secOf(idx),text=LN[idx];
-  if(cur){var o=cur;o.classList.add("out");if(!pan)setTimeout(function(){o.remove()},2400)}
+  if(cur){
+    /* 切句前：如果旧 box 是海报排版，把它的当前 cam 位置存到交接对象，
+       新句的 buildPoster 会从这里继续，镜头跨句不重置。 */
+    if(cur._posterCamSnapshot){
+      try{
+        var snap = cur._posterCamSnapshot();
+        window.__posterCam.x = snap.x;
+        window.__posterCam.y = snap.y;
+        window.__posterCam.vx = snap.vx;
+        window.__posterCam.vy = snap.vy;
+      }catch(_){}
+    }
+    var o=cur;o.classList.add("out");if(!pan)setTimeout(function(){o.remove()},2400)
+  }
   if(!pan&&(wx||wy||(one.style.transform&&one.style.transform!=="none"))){panGen++;one.style.transition="none";one.style.transform="none";one.style.filter="";wx=0;wy=0}
   var box=document.createElement("div");
   box.className="one "+({scatter:"m-scatter",star:"m-star",pan:"m-scatter m-pan",fade:"m-fade",type:"m-type",bounce:"m-bounce",flip:"m-flip",focus:"m-focus",wave:"m-wave",glitch:"m-glitch",poster:"m-poster"})[m];
