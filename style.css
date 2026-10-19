@@ -51,7 +51,7 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,"PingFang SC
 #bg{position:absolute;inset:-40px;transform:translateZ(0);will-change:transform}
 #dimv{position:absolute;inset:0}
 @keyframes gflow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-#one{position:absolute;inset:0}
+#one{position:absolute;inset:0;will-change:transform}
 /* 工具栏 */
 /* 底部：内容面板 + 悬浮导航栏 */
 .dock{flex:0 1 auto;min-height:0;margin-top:12px;display:flex;flex-direction:column;background:var(--card);border-radius:22px;overflow:hidden}
