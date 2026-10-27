@@ -1,0 +1,192 @@
+<!-- =====================================================================
+  风格切换过渡（UI 层）
+  ① 下面的 <style> 粘进 index.html 的 <head>，放在 style.css 之后
+  ② 下面的 <script> 粘进 </body> 前，放在所有 APP/*.js 之后
+  两块都不动 .hide 的全局定义；脚本没加载时 CSS 自动失效（靠 [data-fxb] 门控），
+  renderer.js 里的 setStyle 也会回退到原逻辑。
+====================================================================== -->
+<style id="fxStyle">
+/* ---------- 1) 八个参数面板：.hide 不再是 display:none，而是 max-height + opacity 折叠 ----------
+   不用 display:revert：revert 会把「作者样式」整个丢掉，#pbox 的 display:grid 会退成 block。
+   这里由脚本把每个盒子「去掉 .hide 后的真实 display」量出来，存进 --fx-d，再还原。 */
+:is(#sbox,#pbox,#starbox,#fadebox,#typebox,#posterbox,#fxbox,#sonnetbox)[data-fxb]{
+  --fx-e:cubic-bezier(.22,1,.36,1);
+  --fx-t:calc(420ms/var(--ui-spd,1));
+  display:var(--fx-d,block)!important;
+  max-height:var(--fx-h,2400px);           /* --fx-h 由 ResizeObserver 同步成内容的真实高度 */
+  opacity:1;visibility:visible;
+  overflow:hidden;
+  transition-property:max-height,margin-top,margin-bottom,padding-top,padding-bottom,border-top-width,border-bottom-width,opacity,visibility;
+  transition-duration:var(--fx-t),var(--fx-t),var(--fx-t),var(--fx-t),var(--fx-t),var(--fx-t),var(--fx-t),calc(260ms/var(--ui-spd,1)),0s;
+  transition-delay:0s,0s,0s,0s,0s,0s,0s,calc(80ms/var(--ui-spd,1)),0s;   /* 展开：高度先走，内容稍后淡入 */
+  transition-timing-function:var(--fx-e);
+}
+:is(#sbox,#pbox,#starbox,#fadebox,#typebox,#posterbox,#fxbox,#sonnetbox)[data-fxb].hide{
+  display:var(--fx-d,block)!important;
+  max-height:0!important;
+  margin-top:calc(-1*var(--fx-g,0px))!important;   /* 抵消父级 flex/grid 的 gap，折叠后不留空隙 */
+  margin-bottom:0!important;
+  padding-top:0!important;padding-bottom:0!important;
+  border-top-width:0!important;border-bottom-width:0!important;
+  opacity:0;visibility:hidden;pointer-events:none;overflow:hidden!important;
+  transition-duration:var(--fx-t),var(--fx-t),var(--fx-t),var(--fx-t),var(--fx-t),var(--fx-t),var(--fx-t),calc(180ms/var(--ui-spd,1)),0s;
+  transition-delay:0s,0s,0s,0s,0s,0s,0s,0s,var(--fx-t);                  /* 收起：高度走完才 visibility:hidden */
+}
+/* 展开到位后放开 overflow，避免裁掉滑块阴影 / chip 放大 */
+:is(#sbox,#pbox,#starbox,#fadebox,#typebox,#posterbox,#fxbox,#sonnetbox)[data-fxb].fx-done:not(.hide){overflow:visible}
+
+/* ---------- 2) chip 选中态 ---------- */
+:is(#styles,#styles2,#styles3,#easeIn,#easeOut,#lyAlign,#lyPos,#lyWrap,#pdTs,#pdOs) .chip{
+  transition:
+    background-color calc(220ms/var(--ui-spd,1)) cubic-bezier(.22,1,.36,1),
+    color calc(220ms/var(--ui-spd,1)) cubic-bezier(.22,1,.36,1),
+    border-color calc(220ms/var(--ui-spd,1)) cubic-bezier(.22,1,.36,1),
+    box-shadow calc(220ms/var(--ui-spd,1)) cubic-bezier(.22,1,.36,1),
+    opacity calc(220ms/var(--ui-spd,1)) cubic-bezier(.22,1,.36,1),
+    transform calc(220ms/var(--ui-spd,1)) cubic-bezier(.22,1,.36,1),     /* 若 .chip 原本有按压 transform 过渡，这里保留 */
+    scale calc(260ms/var(--ui-spd,1)) cubic-bezier(.22,1,.36,1);
+}
+:is(#styles,#styles2,#styles3,#easeIn,#easeOut,#lyAlign,#lyPos,#lyWrap,#pdTs,#pdOs) .chip.on{scale:1.06}   /* 用独立的 scale 属性，不覆盖 chip 原有 transform */
+
+/* ---------- 3) 减少动态效果：只淡入淡出，≤200ms；布局属性在淡出结束后才跳变 ---------- */
+@media (prefers-reduced-motion:reduce){
+  :root{--fx-rd:min(200ms,calc(160ms/var(--ui-spd,1)))}
+  :is(#sbox,#pbox,#starbox,#fadebox,#typebox,#posterbox,#fxbox,#sonnetbox)[data-fxb]{
+    transition-duration:0s,0s,0s,0s,0s,0s,0s,var(--fx-rd),0s;
+    transition-delay:0s,0s,0s,0s,0s,0s,0s,0s,0s;
+  }
+  :is(#sbox,#pbox,#starbox,#fadebox,#typebox,#posterbox,#fxbox,#sonnetbox)[data-fxb].hide{
+    transition-duration:0s,0s,0s,0s,0s,0s,0s,var(--fx-rd),0s;
+    transition-delay:var(--fx-rd),var(--fx-rd),var(--fx-rd),var(--fx-rd),var(--fx-rd),var(--fx-rd),var(--fx-rd),0s,var(--fx-rd);
+  }
+  :is(#styles,#styles2,#styles3,#easeIn,#easeOut,#lyAlign,#lyPos,#lyWrap,#pdTs,#pdOs) .chip{
+    transition:background-color var(--fx-rd) linear,color var(--fx-rd) linear,border-color var(--fx-rd) linear,box-shadow var(--fx-rd) linear,opacity var(--fx-rd) linear;
+  }
+  :is(#styles,#styles2,#styles3,#easeIn,#easeOut,#lyAlign,#lyPos,#lyWrap,#pdTs,#pdOs) .chip.on{scale:none}
+}
+</style>
+
+<script id="fxScript">
+/* 风格切换过渡：window.StyleFX.swap(commit) + 参数面板测量 + #styleSelTx 文字淡入。
+   不碰 #splash、player.js、音频链路；所有时长都经 T() 除以 --ui-spd。 */
+(function(){
+  "use strict";
+  var EASE="cubic-bezier(.22,1,.36,1)",
+      root=document.documentElement,
+      IDS=["sbox","pbox","starbox","fadebox","typebox","posterbox","fxbox","sonnetbox"],
+      canAnim=typeof Element!=="undefined"&&typeof Element.prototype.animate==="function";
+
+  function spd(){var v=parseFloat(getComputedStyle(root).getPropertyValue("--ui-spd"));return v>0?v:1}
+  function T(ms){return ms/spd()}
+  function reduced(){return !!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches)}
+  function px(v){return parseFloat(v)||0}
+
+  /* =========================================================
+     A. 舞台内容：通用退场 → 提交 → 通用入场
+     只动 opacity / translate / scale（独立属性）：不会覆盖 #one 上 panMove 写的 transform / filter，
+     也不会盖住新风格自己在 .one 子节点上的入场动画。
+     ========================================================= */
+  var OUT={opacity:"0",translate:"0 -6px",scale:"0.97"},
+      RISE=[{opacity:"0",translate:"0 14px",scale:"0.985"},{opacity:"1",translate:"0 0",scale:"1"}],
+      FADE=[{opacity:"0"},{opacity:"1"}],
+      busy=false,enterA=null;
+
+  function hostEl(){                                   // 普通模式内容在 #one，商籁在 #sonnetHost
+    var st=document.getElementById("stage");
+    return document.getElementById(st&&st.classList.contains("mode-sonnet")?"sonnetHost":"one");
+  }
+  function hasContent(h){return !!h&&(h.id==="sonnetHost"||h.childElementCount>0)}
+  function snap(h){var cs=getComputedStyle(h);return{opacity:cs.opacity,translate:cs.translate||"none",scale:cs.scale||"none"}}
+  function wait(a,ms){                                  // 动画结束；页面在后台、时间线不走时用定时器兜底
+    return Promise.race([a.finished.catch(function(){}),new Promise(function(r){setTimeout(r,ms+120)})]);
+  }
+
+  async function swap(commit){
+    if(busy)return;                                     // 已在退场：它结束时按最新的 style 提交，不重复
+    var h=hostEl();
+    if(!canAnim||!hasContent(h)){commit();return}       // 没有可退场的内容（启动首次渲染等）
+    busy=true;
+    var red=reduced(),from=snap(h),dur=red?Math.min(90,T(90)):T(200);
+    if(enterA){enterA.cancel();enterA=null}             // 入场没播完又点了：从当前视觉状态接着退，不跳变
+    var out=h.animate([red?{opacity:from.opacity}:from,red?{opacity:"0"}:OUT],{duration:dur,easing:EASE,fill:"forwards"});
+    await wait(out,dur);                                // 退场结束 → 同一个任务里提交 + 起入场，中间没有空帧
+    busy=false;
+    try{commit()}catch(e){console.error("[StyleFX] commit 失败",e)}
+    var nh=hostEl(),ed=red?Math.min(110,T(110)):T(360),
+        ea=nh.animate(red?FADE:RISE,{duration:ed,easing:EASE});   // 提交后再按 mode-sonnet 重新选宿主
+    enterA=ea;
+    try{out.cancel()}catch(_){}                         // 入场已盖在上面，这时再撤掉退场的 forwards
+    ea.finished.then(function(){if(enterA===ea)enterA=null},function(){});
+  }
+  window.StyleFX={swap:swap};
+
+  /* =========================================================
+     B. 参数面板：量真实 display / 内边距 / 内容高度，ResizeObserver 同步 --fx-h
+     ========================================================= */
+  var boxes=[],dirty=[],raf=0,
+      ro=window.ResizeObserver?new ResizeObserver(function(es){es.forEach(function(e){mark(e.target._fxBox||e.target)})}):null;
+
+  function isHid(el){return el.classList.contains("hide")}
+  function mark(el){                                    // rAF 合并，一帧最多量一次
+    if(dirty.indexOf(el)<0)dirty.push(el);
+    if(!raf)raf=requestAnimationFrame(function(){raf=0;var L=dirty;dirty=[];L.forEach(fit)});
+  }
+  function natural(el){                                 // 暂时撤掉覆盖 + .hide，读「原始 CSS」下的真实值
+    var hid=isHid(el),ps=el.parentNode&&el.parentNode.nodeType===1?getComputedStyle(el.parentNode):null,g=0;
+    el.removeAttribute("data-fxb");
+    if(hid)el.classList.remove("hide");
+    var cs=getComputedStyle(el),d=cs.display;
+    el._fx={pad:px(cs.paddingTop)+px(cs.paddingBottom),bd:px(cs.borderTopWidth)+px(cs.borderBottomWidth),bb:cs.boxSizing==="border-box"};
+    if(ps&&(ps.display.indexOf("grid")>=0||(ps.display.indexOf("flex")>=0&&ps.flexDirection.indexOf("column")===0)))g=px(ps.rowGap);
+    el.style.setProperty("--fx-d",d&&d!=="none"?d:"block");     // #pbox 会量出 grid
+    el.style.setProperty("--fx-g",g+"px");
+    if(hid)el.classList.add("hide");
+    void el.offsetHeight;                               // 先用原始 CSS 刷一次样式，再挂回覆盖 → 不会触发过渡
+    el.setAttribute("data-fxb","");
+  }
+  function fit(el){                                     // 内容高度 → --fx-h（折叠中也能量：scrollHeight 减去当前内边距）
+    var f=el._fx;if(!f)return;
+    var sh=el.scrollHeight;if(!sh)return;               // 祖先不可见：等它显示后 ResizeObserver 会再触发
+    var cs=getComputedStyle(el),cp=px(cs.paddingTop)+px(cs.paddingBottom),
+        h=Math.max(0,sh-cp)+(f.bb?f.pad+f.bd:0);
+    el.style.setProperty("--fx-h",(Math.ceil(h)+1)+"px");
+  }
+  function watchState(el){                              // 仅负责 fx-done（展开到位后放开 overflow）
+    el._fxHid=isHid(el);
+    if(!el._fxHid)el.classList.add("fx-done");
+    new MutationObserver(function(){
+      var h=isHid(el);if(h===el._fxHid)return;          // 只响应 .hide 真正变化（自己加减 fx-done 会再触发，这里直接过滤）
+      el._fxHid=h;clearTimeout(el._fxT);el.classList.remove("fx-done");
+      if(!h){mark(el);el._fxT=setTimeout(function(){if(!isHid(el))el.classList.add("fx-done")},T(420)+80)}
+    }).observe(el,{attributes:true,attributeFilter:["class"]});
+  }
+  function observeKids(el){
+    if(!ro)return;
+    [].forEach.call(el.children,function(c){if(!c._fxBox){c._fxBox=el;ro.observe(c)}});
+  }
+  IDS.forEach(function(id){
+    var el=document.getElementById(id);if(!el)return;
+    boxes.push(el);natural(el);fit(el);watchState(el);
+    if(ro){ro.observe(el);observeKids(el);new MutationObserver(function(){observeKids(el);mark(el)}).observe(el,{childList:true})}
+  });
+  var rz=0;
+  window.addEventListener("resize",function(){          // 断点切换可能改 display / padding：重新量
+    clearTimeout(rz);rz=setTimeout(function(){boxes.forEach(function(el){natural(el);fit(el)})},200);
+  });
+
+  /* =========================================================
+     C. #styleSelTx 文字变化：300ms 淡入 + 小位移（文字没变就不播，避免每次打开下拉都闪）
+     ========================================================= */
+  (function(){
+    var el=document.getElementById("styleSelTx");if(!el||!window.MutationObserver)return;
+    var last=el.textContent;
+    new MutationObserver(function(){
+      var t=el.textContent;if(t===last)return;last=t;
+      if(!canAnim)return;
+      var red=reduced();
+      el.animate(red?FADE:[{opacity:"0",translate:"0 6px"},{opacity:"1",translate:"0 0"}],
+                 {duration:red?Math.min(160,T(160)):T(300),easing:EASE});
+    }).observe(el,{childList:true,characterData:true,subtree:true});
+  })();
+})();
+</script>

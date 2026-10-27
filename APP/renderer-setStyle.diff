@@ -1,0 +1,15 @@
+--- a/APP/renderer.js	2026-10-27 10:33:02.081571991 +0000
++++ b/APP/renderer.js	2026-10-27 10:33:02.146608316 +0000
+@@ -2,7 +2,11 @@
+ var LIVE=true,dirty=0,eIn="cubic-bezier(.2,.8,.2,1)",eOut="cubic-bezier(.4,0,.8,.3)",CF=[],shownSig="",statT=0,skyT=0,sonnetOn=false,sonnetKillT=0;
+ function cfgOf(i){return CF[i]||{}}
+ function markStyles(){[$("styles"),$("styles2"),$("styles3")].forEach(function(box,b){var L=b===2?STY3:b?STY2:STY;[].forEach.call(box.children,function(c,i){c.classList.toggle("on",L[i][0]===style)})})}
+-function setStyle(v){style=v;idx=0;prog=0;reqRender();markStyles()}
++function setStyle(v){
++  if(v===style||!LIVE||!window.StyleFX){style=v;idx=0;prog=0;reqRender();markStyles();return}   // 原逻辑：同风格重点 / 手动刷新模式 / 过渡模块未加载
++  style=v;markStyles();syncBoxes();                          // 立刻反馈：chip 选中态、下拉文字、参数面板开合
++  StyleFX.swap(function(){idx=0;prog=0;reqRender()});       // 旧内容通用退场 → 提交真正的切换 → 新内容升起淡入
++}
+ chips($("styles"),STY,function(){return style},setStyle);
+ chips($("styles2"),STY2,function(){return style},setStyle);
+ chips($("styles3"),STY3,function(){return style},setStyle);
