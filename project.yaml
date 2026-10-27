@@ -1,0 +1,42 @@
+name: TextDisplay
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "15.0"
+targets:
+  TextDisplay:
+    type: application
+    platform: iOS
+    sources:
+      - path: TextDisplayApp.swift
+      - path: WebFilePicker.swift
+        optional: true
+      - path: Assets.xcassets
+      - path: index.html
+        buildPhase: resources
+      - path: style.css
+        buildPhase: resources
+      - path: APP
+        type: folder
+        buildPhase: resources
+    info:
+      path: Info.plist
+      properties:
+        UIFileSharingEnabled: true               # 「文件」App 里显示本 App 的文件夹
+        LSSupportsOpeningDocumentsInPlace: true  # 允许直接在原位置打开里面的文件
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.textdisplay
+        PRODUCT_NAME: 文字显示器
+        INFOPLIST_KEY_CFBundleDisplayName: 文字显示器
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        MARKETING_VERSION: "0.1.1"
+        CURRENT_PROJECT_VERSION: "3"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Manual

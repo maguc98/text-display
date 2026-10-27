@@ -2,20 +2,217 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>文字显示器</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Yiu.fm</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="文字显示器">
+<meta name="apple-mobile-web-app-title" content="Yiu.fm">
 <link rel="apple-touch-icon" href="./icon.png">
-<link rel="stylesheet" href="./style.css">
+<link rel="stylesheet" href="./style.css?v=20261027e">
+<style id="sonnetBoxCSS">#sonnetRgb{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;visibility:hidden}#stage.mode-sonnet #sonnetRgb{visibility:visible}#sonnetbox .row span{min-width:64px}#sonnetbox #sonnetReset{margin-top:14px}</style>
+<style id="splashStyle">
+#splash{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(120% 80% at 50% 38%,#16182a 0%,#0b0b12 55%,#08080c 100%);color:#f5f5f7;
+  touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+#splash .sp-ring{position:relative;width:96px;height:96px;margin-bottom:26px}
+#splash .sp-ring i{position:absolute;inset:0;border-radius:50%;border:1.5px solid rgba(143,176,255,.75);opacity:0;
+  animation:spRing 2.2s cubic-bezier(.2,.6,.3,1) infinite}
+#splash .sp-ring i:nth-child(2){animation-delay:.7s}
+#splash .sp-ring i:nth-child(3){animation-delay:1.4s}
+#splash .sp-ring b{position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;
+  background:#8fb0ff;box-shadow:0 0 24px 4px rgba(143,176,255,.55);animation:spDot 2.2s ease-in-out infinite}
+#splash .sp-name{font-size:30px;font-weight:800;letter-spacing:1.5px;opacity:0;transform:translateY(8px);
+  animation:spName .8s cubic-bezier(.22,1,.36,1) .15s forwards}
+#splash .sp-name em{font-style:normal;color:#8fb0ff}
+#splash.has-img{background:#000 center/cover no-repeat}
+#splash.has-img .sp-ring,#splash.has-img .sp-name{display:none}
+@keyframes spRing{0%{transform:scale(.15);opacity:.9}100%{transform:scale(1);opacity:0}}
+@keyframes spDot{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+@keyframes spName{to{opacity:1;transform:none}}
+</style>
+<style id="splashCfgStyle">
+#qpop .qs-row{display:flex;align-items:center;gap:12px;margin-top:8px}
+#qpop .qs-thumb{flex:none;width:40px;height:72px;border-radius:10px;border:1px solid var(--bd);
+  background:radial-gradient(circle at 50% 42%,#8fb0ff 0 3px,transparent 4px),radial-gradient(120% 80% at 50% 38%,#16182a,#08080c) center/cover no-repeat}
+#qpop .qs-thumb:not(.empty){background-size:cover;background-position:center}
+#qpop .qs-btns{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:8px}
+#qpop .qs-btns .chip{padding:7px 12px;font-size:13px}
+#qpop .qs-tip{margin-top:8px;font-size:11.5px;line-height:1.5;color:var(--sub)}
+</style>
+<style id="fxStyle">
+/* ---------- 1) 八个参数面板：.hide 不再是 display:none，而是 max-height + opacity 折叠 ----------
+   不用 display:revert：revert 会把「作者样式」整个丢掉，#pbox 的 display:grid 会退成 block。
+   这里由脚本把每个盒子「去掉 .hide 后的真实 display」量出来，存进 --fx-d，再还原。 */
+:is(#sbox,#pbox,#starbox,#fadebox,#typebox,#posterbox,#fxbox,#sonnetbox)[data-fxb]{
+  --fx-e:cubic-bezier(.22,1,.36,1);
+  --fx-t:calc(420ms/var(--ui-spd,1));
+  display:var(--fx-d,block)!important;
+  max-height:var(--fx-h,2400px);           /* --fx-h 由 ResizeObserver 同步成内容的真实高度 */
+  opacity:1;visibility:visible;
+  overflow:hidden;
+  transition-property:max-height,margin-top,margin-bottom,padding-top,padding-bottom,border-top-width,border-bottom-width,opacity,visibility;
+  transition-duration:var(--fx-t),var(--fx-t),var(--fx-t),var(--fx-t),var(--fx-t),var(--fx-t),var(--fx-t),calc(260ms/var(--ui-spd,1)),0s;
+  transition-delay:0s,0s,0s,0s,0s,0s,0s,calc(80ms/var(--ui-spd,1)),0s;   /* 展开：高度先走，内容稍后淡入 */
+  transition-timing-function:var(--fx-e);
+}
+:is(#sbox,#pbox,#starbox,#fadebox,#typebox,#posterbox,#fxbox,#sonnetbox)[data-fxb].hide{
+  display:var(--fx-d,block)!important;
+  max-height:0!important;
+  margin-top:calc(-1*var(--fx-g,0px))!important;   /* 抵消父级 flex/grid 的 gap，折叠后不留空隙 */
+  margin-bottom:0!important;
+  padding-top:0!important;padding-bottom:0!important;
+  border-top-width:0!important;border-bottom-width:0!important;
+  opacity:0;visibility:hidden;pointer-events:none;overflow:hidden!important;
+  transition-duration:var(--fx-t),var(--fx-t),var(--fx-t),var(--fx-t),var(--fx-t),var(--fx-t),var(--fx-t),calc(180ms/var(--ui-spd,1)),0s;
+  transition-delay:0s,0s,0s,0s,0s,0s,0s,0s,var(--fx-t);                  /* 收起：高度走完才 visibility:hidden */
+}
+/* 展开到位后放开 overflow，避免裁掉滑块阴影 / chip 放大 */
+:is(#sbox,#pbox,#starbox,#fadebox,#typebox,#posterbox,#fxbox,#sonnetbox)[data-fxb].fx-done:not(.hide){overflow:visible}
+
+/* ---------- 2) chip 选中态 ---------- */
+:is(#styles,#styles2,#styles3,#easeIn,#easeOut,#lyAlign,#lyPos,#lyWrap,#pdTs,#pdOs) .chip{
+  transition:
+    background-color calc(220ms/var(--ui-spd,1)) cubic-bezier(.22,1,.36,1),
+    color calc(220ms/var(--ui-spd,1)) cubic-bezier(.22,1,.36,1),
+    border-color calc(220ms/var(--ui-spd,1)) cubic-bezier(.22,1,.36,1),
+    box-shadow calc(220ms/var(--ui-spd,1)) cubic-bezier(.22,1,.36,1),
+    opacity calc(220ms/var(--ui-spd,1)) cubic-bezier(.22,1,.36,1),
+    transform calc(220ms/var(--ui-spd,1)) cubic-bezier(.22,1,.36,1),     /* 若 .chip 原本有按压 transform 过渡，这里保留 */
+    scale calc(260ms/var(--ui-spd,1)) cubic-bezier(.22,1,.36,1);
+}
+:is(#styles,#styles2,#styles3,#easeIn,#easeOut,#lyAlign,#lyPos,#lyWrap,#pdTs,#pdOs) .chip.on{scale:1.06}   /* 用独立的 scale 属性，不覆盖 chip 原有 transform */
+
+/* ---------- 3) 减少动态效果：只淡入淡出，≤200ms；布局属性在淡出结束后才跳变 ---------- */
+@media (prefers-reduced-motion:reduce){
+  :root{--fx-rd:min(200ms,calc(160ms/var(--ui-spd,1)))}
+  :is(#sbox,#pbox,#starbox,#fadebox,#typebox,#posterbox,#fxbox,#sonnetbox)[data-fxb]{
+    transition-duration:0s,0s,0s,0s,0s,0s,0s,var(--fx-rd),0s;
+    transition-delay:0s,0s,0s,0s,0s,0s,0s,0s,0s;
+  }
+  :is(#sbox,#pbox,#starbox,#fadebox,#typebox,#posterbox,#fxbox,#sonnetbox)[data-fxb].hide{
+    transition-duration:0s,0s,0s,0s,0s,0s,0s,var(--fx-rd),0s;
+    transition-delay:var(--fx-rd),var(--fx-rd),var(--fx-rd),var(--fx-rd),var(--fx-rd),var(--fx-rd),var(--fx-rd),0s,var(--fx-rd);
+  }
+  :is(#styles,#styles2,#styles3,#easeIn,#easeOut,#lyAlign,#lyPos,#lyWrap,#pdTs,#pdOs) .chip{
+    transition:background-color var(--fx-rd) linear,color var(--fx-rd) linear,border-color var(--fx-rd) linear,box-shadow var(--fx-rd) linear,opacity var(--fx-rd) linear;
+  }
+  :is(#styles,#styles2,#styles3,#easeIn,#easeOut,#lyAlign,#lyPos,#lyWrap,#pdTs,#pdOs) .chip.on{scale:none}
+}
+</style>
 </head>
 <body>
+<div id="splash" aria-hidden="true"><div class="sp-ring"><i></i><i></i><i></i><b></b></div><div class="sp-name">Yiu<em>.fm</em></div></div>
+<script>
+/* 启动封面：封面真正画出来后至少展示 1.4 秒，等主线程空下来，再从屏幕上任意一点开一个圆，向四周扩散，把封面“擦掉”。
+   点一下封面可提前结束，圆从点击处扩散；window.__hideSplash(x, y) 可手动指定起点；
+   window.__showSplash(cb, noTap) 把封面重新盖上（强制刷新 / 预览用）；
+   自定义封面图存在 localStorage 的 splashImg（设置 → 更多选项 → 开屏封面）。 */
+(function(){
+  var t0 = Date.now(), MIN = 1400, MAX = 10000, loaded = false, busy = false, paintedAt = 0, failTimer = 0;
+  var info = window.__splashInfo = { shownAt: 0, loadAt: null, paintedAt: null, idleWait: null, hideAt: null, mode: null, maskSupported: null, reduceMotion: null, custom: false, w: window.innerWidth, h: window.innerHeight };
+  function cur(){ return document.getElementById('splash'); }
+  function customImg(){
+    var d = window.__splashImg || '';
+    if (!d) { try { d = localStorage.getItem('splashImg') || ''; } catch(_) {} }
+    return d;
+  }
+  // 给封面套上自定义图（没有就用默认的圆点 + 文字）
+  function dress(n){
+    var d = customImg();
+    if (d) { n.classList.add('has-img'); n.style.backgroundImage = 'url("' + d + '")'; info.custom = true; }
+    else { n.classList.remove('has-img'); n.style.backgroundImage = ''; info.custom = false; }
+  }
+  window.__dressSplash = dress;
+  var first = cur();
+  if (!first) return;
+  dress(first);
+  function remove(){ var n = cur(); if (n && n.parentNode) n.parentNode.removeChild(n); }
+  function bind(n){ n.addEventListener('pointerdown', function(e){ hide(e.clientX, e.clientY); }); }
+
+  function hide(x, y){
+    var n = cur();
+    if (!n || busy) return; busy = true; clearTimeout(failTimer);
+    var W = window.innerWidth, H = window.innerHeight;
+    if (typeof x !== 'number' || typeof y !== 'number') {            // 没指定：屏幕上随机一点（避开最边缘）
+      x = W * (0.15 + Math.random() * 0.7);
+      y = H * (0.15 + Math.random() * 0.7);
+    }
+    n.style.pointerEvents = 'none';
+    // 启动封面是品牌动画，不跟随系统「减弱动态效果」降级（否则开了该选项的设备上永远只看到淡出）
+    var maskOK = false;
+    try { maskOK = !!(window.CSS && CSS.supports && (CSS.supports('mask-image', 'radial-gradient(circle at 1px 1px,transparent 0,#000 1px)') ||
+                                                      CSS.supports('-webkit-mask-image', 'radial-gradient(circle at 1px 1px,transparent 0,#000 1px)'))); } catch(_) {}
+    info.hideAt = Date.now() - t0; info.x = Math.round(x); info.y = Math.round(y); info.maskSupported = maskOK;
+    try { info.reduceMotion = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); } catch(_) {}
+    if (!maskOK) { n.style.transition = 'opacity .4s ease'; n.style.opacity = '0'; setTimeout(function(){ busy = false; remove(); }, 440); info.mode = 'fade'; return; }
+    info.mode = 'circle';
+    var spd = 1; try { spd = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui-spd')) || 1; } catch(_) {}
+    var FEATHER = 36;                                                    // 圆边缘的柔化宽度
+    var far = Math.max(Math.hypot(x, y), Math.hypot(W - x, y), Math.hypot(x, H - y), Math.hypot(W - x, H - y));
+    var R = far + FEATHER, dur = 1100 / spd, start = 0;
+    function ease(p){ return p < .5 ? 4*p*p*p : 1 - Math.pow(-2*p + 2, 3) / 2; }   // easeInOutCubic
+    function frame(now){
+      if (!start) start = now;
+      var p = Math.min(1, (now - start) / dur), r = R * ease(p);
+      var g = 'radial-gradient(circle at ' + x + 'px ' + y + 'px, transparent ' + Math.max(0, r - FEATHER) + 'px, #000 ' + r + 'px)';
+      n.style.webkitMaskImage = g; n.style.maskImage = g;
+      if (p < 1) requestAnimationFrame(frame); else { busy = false; remove(); }
+    }
+    // 先把遮罩设成「整块可见」，再开始，避免第一帧闪一下
+    var g0 = 'radial-gradient(circle at ' + x + 'px ' + y + 'px, transparent 0px, #000 1px)';
+    n.style.webkitMaskImage = g0; n.style.maskImage = g0;
+    requestAnimationFrame(frame);
+  }
+  window.__hideSplash = hide;
+
+  // 重新显示封面（淡入盖住页面），盖好后调用 cb。noTap=true 时点击封面不会提前结束。
+  window.__showSplash = function(cb, noTap){
+    if (cur()) { cb && setTimeout(cb, 0); return; }
+    var n = document.createElement('div');
+    n.id = 'splash'; n.setAttribute('aria-hidden', 'true');
+    n.innerHTML = '<div class="sp-ring"><i></i><i></i><i></i><b></b></div><div class="sp-name">Yiu<em>.fm</em></div>';
+    dress(n);
+    busy = false;
+    if (!noTap) bind(n);
+    n.style.opacity = '0'; n.style.transition = 'opacity .28s ease';
+    document.body.appendChild(n);
+    void n.offsetWidth;
+    n.style.opacity = '1';
+    cb && setTimeout(cb, 320);
+  };
+
+  // 计时从「封面真正画出来」那一刻开始（双 rAF），而不是脚本开始运行的时刻：
+  // 真机上 20 个脚本顺序执行会占满主线程，封面可能要等脚本跑完才第一次被画出来。
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ paintedAt = Date.now(); info.paintedAt = paintedAt - t0; check(); }); });
+  function check(){
+    if (busy || !loaded || !paintedAt) return;
+    var wait = MIN - (Date.now() - paintedAt);
+    if (wait > 0) { setTimeout(check, wait); return; }
+    waitIdle();
+  }
+  // 连续 3 帧间隔都小于 70ms（主线程已经空下来）再开始动画；App 自己的循环一直在跑，所以最多只再等 0.7 秒
+  function waitIdle(){
+    var ok = 0, last = 0, begun = Date.now();
+    function f(now){
+      if (busy) return;
+      if (last && now - last < 70) ok++; else ok = 0;
+      last = now;
+      if (ok >= 3 || Date.now() - begun > 700) { info.idleWait = Date.now() - begun; hide(); }
+      else requestAnimationFrame(f);
+    }
+    requestAnimationFrame(f);
+  }
+  window.addEventListener('load', function(){ loaded = true; info.loadAt = Date.now() - t0; check(); });
+  bind(first);                                                                       // 点哪儿，圆从哪儿开始
+  failTimer = setTimeout(function(){ hide(); }, MAX);                                // 兜底：10 秒无论如何都收掉
+})();
+</script>
 <div id="amb"></div>
 <div id="pgbg"></div>
 <div class="app">
   <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="mblur" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB"><feGaussianBlur id="mbg" stdDeviation="0 0"/></filter></svg>
-<div id="stage"><div id="bgf"></div><div id="bg"></div><div id="dimv"></div><div id="sky" class="hide"></div><div id="one"></div>
+<div id="stage"><div id="bgf"></div><div id="bg"></div><div id="dimv"></div><div id="sky" class="hide"></div><div id="one"></div><div id="sonnetHost"></div>
     </div>
   <div id="hub">
   <div id="stylePop" class="gpop" role="listbox" aria-hidden="true"><div class="sp-grid"></div></div>
@@ -42,12 +239,22 @@
   </div>
 <div id="hubGlow"></div>
 <div class="np-info"><div class="np-t" id="npT"></div><div class="np-s cnt"></div></div>
-  <div class="statbar" id="statbar"><div class="tl" id="tl"></div><button class="mini hide" id="refresh" type="button">刷新预览</button></div>
+  <div class="statbar" id="statbar">
+    <span class="tl-time" id="tlTimeCur">00:00</span>
+    <div class="tl" id="tl"></div>
+    <span class="tl-time" id="tlTimeTot">00:00</span>
+    <button class="mini hide" id="refresh" type="button">刷新预览</button>
+  </div>
 
   <div class="dock">
     <div class="panel" id="panel">
       <div class="pg" id="pg0">
-        <div class="ph">文字 · 逐句卡片<span id="lcnt" class="lcnt"></span></div>
+        <div class="ph" style="margin-bottom:8px;"><span id="lcnt" class="lcnt" style="float:none; font-size:11px;"></span></div>
+
+        <!-- 文件包视图容器 -->
+        <div id="viewHorizontal"></div>
+
+        <!-- 原有的卡片列表 -->
         <div id="cards" class="cards"></div>
         <button class="chip addc" id="addc" type="button"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>添加一句</button>
         <textarea id="txt" hidden>晚风刚好，你也在
@@ -101,12 +308,12 @@
 字落下来，就有了光
 唱给你听</textarea>
       </div>
-      <div id="musicPanel" class="hide" style="padding: 30px 20px; text-align: center; color: #fff;">
-        <div style="margin-bottom: 16px; opacity: 0.8; display: flex; justify-content: center;">
-        <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: #8fb0ff;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-      </div>
-        <div id="musicPanelTitle" style="font-size: 20px; font-weight: bold; margin-bottom: 8px;">暂无播放歌曲</div>
-        <div id="musicPanelArtist" style="font-size: 14px; color: rgba(255,255,255,0.6);">请先在菜单中导入音频和 LRC</div>
+      <div id="musicPanel" class="hide" style="padding:2px 0 6px;text-align:left;color:#fff;">
+        <!-- 旧的「音符图标 + 标题 + 本地音频」：已隐藏。元素保留在 DOM 里，因为 player.js 的 updateMusicPanel 仍会往里写字，直接删会报错 -->
+        <div id="musicHead" hidden>
+          <div id="musicPanelTitle">暂无播放歌曲</div>
+          <div id="musicPanelArtist">请先在底部「···」菜单中导入音频和 LRC</div>
+        </div>
       </div>
 
       <div class="pg hide" id="pg1">
@@ -164,17 +371,48 @@
           <div class="row"><span>间隔</span><input type="range" id="fxS" min="10" max="220" value="60"></div>
           <div class="row"><span>力度</span><input type="range" id="fxK" min="20" max="200" value="100"></div>
         </div>
-            <label class="chk"><input type="checkbox" id="gtext"> 文字渐变</label>
+        <div id="sonnetbox" class="hide">
+          <div class="mt">商籁 · 动效</div>
+          <div class="row"><span>动效强度</span><input type="range" data-sk="typographyMotion" data-scale="100" min="0" max="200" value="100"></div>
+          <div class="row"><span>镜头强度</span><input type="range" data-sk="cameraIntensity" data-scale="100" min="0" max="200" value="100"></div>
+          <div class="row"><span>图形密度</span><input type="range" data-sk="mgDensity" data-scale="100" min="0" max="100" value="50"></div>
+          <div class="row"><span>字号</span><input type="range" data-sk="lyricsFontScale" data-scale="100" min="50" max="200" value="100"></div>
+          <div class="row"><span>字重</span><input type="range" data-sk="fontWeight" min="300" max="900" step="100" value="800"></div>
+          <div class="mt">光效 / 图层</div>
+          <label class="chk"><input type="checkbox" data-sk="showGuide" checked> 光效指引</label>
+          <label class="chk"><input type="checkbox" data-sk="postProcessEnabled"> 后处理光效</label>
+          <label class="chk"><input type="checkbox" data-sk="showBackgroundMg" checked> 背景动态图形</label>
+          <label class="chk"><input type="checkbox" data-sk="showFixedGeo" checked> 固定几何</label>
+          <label class="chk"><input type="checkbox" data-sk="showBackgroundDecor" checked> 背景装饰</label>
+          <label class="chk"><input type="checkbox" data-sk="showGiantDecorativeText" checked> 巨型装饰字</label>
+          <label class="chk"><input type="checkbox" data-sk="showOnlyText"> 只显示文字</label>
+          <label class="chk"><input type="checkbox" data-sk="enableTransitions" checked> 转场动画</label>
+          <label class="chk"><input type="checkbox" data-sk="interludeDots" checked> 间奏圆点</label>
+          <div class="mt">RGB 色散（仅上下两端）</div>
+          <div class="row"><span>强度</span><input type="range" data-sk="edgeDispersion" data-scale="100" min="0" max="200" value="80"></div>
+          <div class="row"><span>范围</span><input type="range" data-sk="edgeDispersionBand" data-scale="100" min="10" max="100" value="70"></div>
+          <div class="mt">RGB 边缘色闪</div>
+          <label class="chk"><input type="checkbox" data-sk="rgbEdge" checked> 屏幕边缘 RGB 色闪</label>
+          <div class="row"><span>强度</span><input type="range" data-sk="rgbEdgeIntensity" data-scale="100" min="0" max="100" value="70"></div>
+          <div class="row"><span>范围</span><input type="range" data-sk="rgbEdgeWidth" data-scale="100" min="4" max="40" value="14"></div>
+          <div class="row"><span>频率</span><input type="range" data-sk="rgbEdgeRate" data-scale="100" min="30" max="300" value="100"></div>
+          <div class="mt">颜色</div>
+          <div class="row"><span>文字</span><input type="color" data-sk="primaryColor" value="#ffffff"></div>
+          <div class="row"><span>次要色</span><input type="color" data-sk="secondaryColor" value="#8899ff"></div>
+          <div class="row"><span>强调/光效</span><input type="color" data-sk="accentColor" value="#ffcc44"></div>
+          <div class="row"><span>背景</span><input type="color" data-sk="backgroundColor" value="#000000"></div>
+          <button class="chip" id="sonnetReset" type="button">恢复默认</button>
+        </div>
+            <label class="chk" id="gtextRow"><input type="checkbox" id="gtext"> 文字渐变</label>
           </div></div></div>
         </div>
       </div>
 
       <div class="pg hide" id="pg2">
-        <div class="ph">背景</div>
-        <div id="coverWrap" style="position: relative; width: 100%; height: 140px; margin: 0; border-radius: 16px; overflow: hidden;">
+        <div id="coverWrap" style="position: relative; width: 100%; height: 150px; margin: 10px 0 0; border-radius: 16px; overflow: hidden;">
           <div id="hubCover" style="height: 100% !important; margin: 0 !important; border-radius: 16px;"></div>
-          <button id="btnChangeBg" type="button" title="样式" aria-label="样式" aria-haspopup="dialog" aria-expanded="false" style="left: 10px; position: absolute; bottom: 10px; width: 38px; height: 38px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid rgba(255,255,255,.28); background: rgba(30,30,36,.42); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 4px 14px rgba(0,0,0,.35); color: #fff; opacity: 0; pointer-events: none; transition: opacity .3s, scale .3s; z-index: 2;"><svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
-          <button id="btnZoomBg" type="button" title="放大" aria-label="放大" aria-haspopup="dialog" aria-expanded="false" style="right: 10px; position: absolute; bottom: 10px; width: 38px; height: 38px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid rgba(255,255,255,.28); background: rgba(30,30,36,.42); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 4px 14px rgba(0,0,0,.35); color: #fff; opacity: 0; pointer-events: none; transition: opacity .3s, scale .3s; z-index: 2;"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg></button>
+          <button id="btnChangeBg" type="button" title="样式" aria-label="样式" aria-haspopup="dialog" aria-expanded="false" style="left: 10px; position: absolute; bottom: 10px; width: 38px; height: 38px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid rgba(255,255,255,.28); background: rgba(30,30,36,.42); -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); box-shadow: 0 4px 14px rgba(0,0,0,.35); color: #fff; opacity: 0; pointer-events: none; transition: opacity .3s, scale .3s; z-index: 2;"><svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
+          <button id="btnZoomBg" type="button" title="放大" aria-label="放大" aria-haspopup="dialog" aria-expanded="false" style="right: 10px; position: absolute; bottom: 10px; width: 38px; height: 38px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid rgba(255,255,255,.28); background: rgba(30,30,36,.42); -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); box-shadow: 0 4px 14px rgba(0,0,0,.35); color: #fff; opacity: 0; pointer-events: none; transition: opacity .3s, scale .3s; z-index: 2;"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg></button>
         </div>
         
         <!-- 保留隐藏的 input 防止 JS 报错 -->
@@ -200,6 +438,7 @@
             <!-- 第一顺位：滑块 -->
             <div class="row"><span>字号</span><input type="range" id="size" min="14" max="80" value="28"></div>
             <div class="row"><span>阴影</span><input type="range" id="shd" min="0" max="100" value="0"></div>
+            <div class="row"><span style="white-space:nowrap">RGB分离</span><input type="range" id="rgb" min="0" max="10" step="0.5" value="0"></div>
             <div class="row"><span>描边</span><input type="range" id="sw" min="0" max="8" value="0"><input type="color" id="sc" value="#000000"></div>
             <!-- 第四顺位：颜色选择 -->
             <div class="mt" style="margin-top:14px">字体颜色</div>
@@ -232,6 +471,13 @@
             <input type="file" id="impFile" accept="application/json,.json" class="hide">
             <div class="qtip">内容会自动保存在本机。iOS 可能清理网页数据，建议定期导出备份。</div>
             <div class="qtip" id="bkTime" style="margin-top:2px"></div>
+            <div class="mt" style="margin-top:16px">本地导入管理</div>
+            <div class="qtip" id="localQuota" style="margin-top:4px">正在读取空间…</div>
+            <div class="qtip">音频、同名 .lrc、同名封面图、同名 .meta.json 请一起多选，文件名保持一致才会自动配对。卸载 App 或系统空间紧张时，已导入的歌曲可能丢失。</div>
+            <div class="row" style="gap:8px;margin-top:10px">
+              <button class="chip" id="localImportBtn" type="button" style="flex:1;padding:10px 0">批量导入</button>
+              <button class="chip" id="localClearBtn" type="button" style="flex:1;padding:10px 0">清空导入</button>
+            </div>
           </div></div></div>
         </div>
       </div>
@@ -242,8 +488,8 @@
           <button class="chip" id="pickAudio" type="button" style="flex:1;padding:10px 0">选择音频</button>
           <button class="chip" id="pickLrc" type="button" style="flex:1;padding:10px 0">导入 LRC</button>
         </div>
-        <input type="file" id="audioFile" accept="audio/*" class="hide">
-        <input type="file" id="lrcFile" accept=".lrc,.txt,text/plain" class="hide">
+        <input type="file" id="audioFile" class="hide">
+        <input type="file" id="lrcFile" class="hide">
         <div id="audioInfo" class="qtip" style="margin-top:8px">未加载音频 · 当前为固定时长模式</div>
         <div class="ctl"><button class="ppb" title="暂停/继续">⏸</button><button class="nxb" title="下一句">⏭</button></div>
         <div class="cnt" style="flex:none;margin-top:10px"></div>
@@ -259,12 +505,34 @@
       <button class="nb" data-i="3" title="调节" aria-label="调节"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9.5" cy="7" r="2.2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2.2" fill="currentColor" stroke="none"/><circle cx="7.5" cy="17" r="2.2" fill="currentColor" stroke="none"/></svg></button>
       <button class="nb" data-i="1" title="风格" aria-label="风格"><svg viewBox="0 0 24 24"><path d="M12 3.5l1.6 4 4 1.6-4 1.6-1.6 4-1.6-4-4-1.6 4-1.6z"/><path d="M19 14.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z" fill="currentColor" stroke="none"/></svg></button>
       <button class="nb" data-i="2" title="背景" aria-label="背景"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="9.5" r="1.5"/><path d="M6 18.5l5-5 3.5 3.5 3-3 2 2"/></svg></button>
-      <button class="nb" data-i="0" title="文字" aria-label="文字"><svg viewBox="0 0 24 24"><rect x="4.5" y="3.5" width="15" height="17" rx="2.5"/><path d="M8.2 8.2h7.6M8.2 12h7.6M8.2 15.8h4.6"/></svg></button>
+      <button class="nb" data-i="0" title="文字" aria-label="文字"><svg viewBox="0 0 24 24"><rect class="a-box" x="4.5" y="3.5" width="15" height="17" rx="2.5"/><path class="a-l1" d="M8.2 8.2h7.6"/><path class="a-l2" d="M8.2 12h7.6"/><path class="a-l3" d="M8.2 15.8h4.6"/></svg></button>
     </div>
   </div>
   <div id="cdock">
-    <div id="mediaMenu">
-<div class="mode-slider-wrap">
+    <div id="mediaMenu" class="theme-picker">
+      <div class="tp-header">
+        <div class="tp-title">网格卡片</div>
+        <button type="button" class="tp-reset" id="tpReset">恢复默认</button>
+      </div>
+      <div class="tp-carousel" id="tpCarousel"></div>
+      <div class="tp-hint">长按主题卡片可删除</div>
+      <div class="tp-options">
+        <div class="tp-row">
+          <div class="tp-lbl"><div class="tp-name">卡片模糊程度</div><div class="tp-desc">调节全局卡片的毛玻璃模糊</div></div>
+          <div class="tp-ctrl"><input type="range" id="tpBlur" min="5" max="40" value="23"><em id="tpBlurV">23px</em></div>
+        </div>
+      </div>
+    </div>
+    <div id="qpop" aria-hidden="true">
+     <div class="qp-view" id="qpView">
+      <!-- 一级页：三行 -->
+      <div class="qp-pg qp-p1" id="qpP1">
+        <button type="button" class="qp-row" id="qpGoSub" aria-label="其他选项"><span>其他选项</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <div class="qp-imp" id="qpImp">
+          <button type="button" id="btnPickAudio" class="bt"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> 选择音频</button>
+          <button type="button" id="btnPickLrc" class="bt"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> 导入 LRC</button>
+        </div>
+        <div class="mode-slider-wrap">
   <div class="mode-slider is-text" id="modeSlider">
     <div class="mode-slider-thumb"></div>
     <button type="button" id="btnModeMusic" class="mode-btn" aria-label="音乐模式">
@@ -276,28 +544,43 @@
   </div>
   <div class="mode-slider-label" id="modeSliderLabel">文字模式</div>
 </div>
-  <button type="button" id="btnPickAudio"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> 选择音频</button>
-  <button type="button" id="btnPickLrc"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> 导入 LRC</button>
-</div>
-    <div id="qpop" aria-hidden="true">
+      </div>
+      <!-- 二级页：其他选项 -->
+      <div class="qp-pg qp-p2" id="qpP2" aria-hidden="true">
+      <div class="qp-top"><button type="button" class="qp-back" id="qpBack" aria-label="返回"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button><div class="qp-ttl">其他选项</div></div>
       <div class="qh"><b>换图渐变速度</b><em id="qFadeSpeedV" class="av">1.5s</em></div>
       <div class="qr"><span>1.5s</span><input type="range" id="qFadeSpeed" min="1.5" max="5" step="0.5" value="1.5" aria-label="渐变速度"><span>5s</span></div>
-      <div class="mt" style="margin:14px 0 0">自动隐藏 UI</div>
+      <div class="qh" style="margin-top:14px"><b>自动隐藏 UI</b></div>
       <div class="qr">
         <span>1s</span>
         <input type="range" id="qImmerse" min="1" max="10" step="1" value="10" aria-label="自动隐藏时间">
         <em id="qImmerseV" class="av">10s</em>
       </div>
+      <div class="qh" style="margin-top:14px"><b>默认页面</b></div>
+      <div id="qDefTab" class="qdef-row" role="radiogroup" aria-label="打开面板时的默认页面"><button type="button" class="chip on" data-v="bg" role="radio" aria-checked="true">图片</button><button type="button" class="chip" data-v="last" role="radio" aria-checked="false">上一次</button></div>
+      <div class="qtip" id="qDefTip">每次打开面板，都先显示图片页。</div>
+      <div class="qh" style="margin-top:14px"><b>灵动岛样式</b></div>
+      <div id="qAiStyle" class="qdef-row" role="radiogroup" aria-label="灵动岛样式"><button type="button" class="chip on" data-v="black" role="radio" aria-checked="true">黑色</button><button type="button" class="chip" data-v="blur" role="radio" aria-checked="false">高斯模糊</button></div>
       <div class="hide">
-      <div class="qh" style="margin-top:14px"><b>模糊强度</b><em id="gbv" class="av">40px</em></div>
-      <div class="qr"><span>0</span><input type="range" id="gbamp" min="0" max="40" value="40" aria-label="模糊强度"><span>40</span></div>
+      <div class="qh" style="margin-top:14px"><b>模糊强度</b><em id="gbv" class="av">23px</em></div>
+      <div class="qr"><span>5</span><input type="range" id="gbamp" min="5" max="40" value="23" aria-label="模糊强度"><span>40</span></div>
       </div>
-      <div class="mt" style="margin:14px 0 0">更多选项</div>
-      <div class="qg">
-        <label class="chk"><input type="checkbox" id="qLoop" checked> 循环播放</label>
+      <div class="qg" style="margin-top:6px">
+        <label class="chk" style="display:none"><input type="checkbox" id="qLoop" checked> 循环播放</label>
         <label class="chk"><input type="checkbox" id="qWake"> 屏幕常亮</label>
-        <label class="chk"><input type="checkbox" id="rainbowMode" checked> 彩虹进度条</label>
+        <label class="chk" style="display:none"><input type="checkbox" id="rainbowMode" checked> 彩虹进度条</label>
       </div>
+      <div class="qh" style="margin-top:14px"><b>开屏封面</b></div>
+      <div class="qs-row">
+        <div class="qs-thumb empty" id="splashThumb" aria-hidden="true"></div>
+        <div class="qs-btns">
+          <button type="button" class="chip" id="splashPick">选择图片</button>
+          <button type="button" class="chip" id="splashPreview">预览</button>
+          <button type="button" class="chip hide" id="splashReset">恢复默认</button>
+        </div>
+        <input type="file" id="splashFile" accept="image/*" style="display:none">
+      </div>
+      <div class="qs-tip" id="splashTip">未设置时使用默认封面。图片会按屏幕比例裁剪，下次启动生效。</div>
       <div id="qOld" style="display:none">
       <div class="mt" style="margin:14px 0 0">快捷开关</div>
       <div class="qg">
@@ -306,26 +589,36 @@
         <label class="chk"><input type="checkbox" id="qdemo"> 开关试玩</label>
       </div>
       </div>
+      </div>
+     </div>
     </div>
     <div id="cbar">
       <button class="cb ppb" type="button" title="暂停/继续" aria-label="暂停/继续"></button>
       <button class="cb nxb" type="button" title="下一句" aria-label="下一句"></button>
-      <button class="cb" id="cfs" type="button" title="媒体导入" aria-label="媒体导入"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button>
+      <button class="cb" id="cfs" type="button" title="导入" aria-label="导入"><svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 7.4V17M20 5.4V15.5" fill="none"/><path d="M10 5.8l10-2.2v3.6l-10 2.2z" stroke-width="1"/><ellipse cx="7" cy="17.6" rx="3.2" ry="2.6" transform="rotate(-18 7 17.6)" stroke="none"/><ellipse cx="17" cy="15.6" rx="3.2" ry="2.6" transform="rotate(-18 17 15.6)" stroke="none"/></svg></button>
       <span class="csep"></span>
-      <button class="cb" id="cq" type="button" title="Q弹与快捷开关" aria-label="Q弹与快捷开关"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h2c1.2 0 1.4-8 3-8s1.7 16 3.2 16 1.5-11 2.8-11 1.2 6 2.2 6H21"/></svg></button>
+      <button class="cb" id="cq" type="button" title="Q弹与快捷开关" aria-label="Q弹与快捷开关"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path pathLength="100" d="M3 12h2c1.2 0 1.4-8 3-8s1.7 16 3.2 16 1.5-11 2.8-11 1.2 6 2.2 6H21"/></svg></button>
       <button class="cb" id="cfold" type="button" title="折叠/展开面板" aria-label="折叠/展开面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+      <button class="cb cb-pkg" id="cUndo" type="button" title="撤回（长按：重做）" aria-label="撤回（长按：重做）" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+      <button class="cb cb-pkg" id="cPaste" type="button" title="粘贴为多张卡片" aria-label="粘贴为多张卡片" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5h6v3H9z"/><path d="M15 6h1.5A2.5 2.5 0 0 1 19 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 17.5v-9A2.5 2.5 0 0 1 7.5 6H9"/></svg></button>
+      <button class="cb cb-pkg" id="cNewPkg" type="button" title="新建文件包" aria-label="新建文件包" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8A2.5 2.5 0 0 1 6 5.5h3.2l2 2.3H18A2.5 2.5 0 0 1 20.5 10v7.5A2.5 2.5 0 0 1 18 20H6a2.5 2.5 0 0 1-2.5-2.5z"/><path d="M12 11.5v5M9.5 14h5"/></svg></button>
     </div>
   </div>
   </div>
   <div class="deco v"></div><div class="deco p"></div>
-  <button id="hback" type="button" aria-label="收起"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <button id="hback" type="button" aria-label="展开部分工具栏" aria-expanded="false" aria-controls="hbTools"><svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="10" rx="5"/><circle cx="7.6" cy="12" r="1.9" fill="currentColor" stroke="none"/><circle cx="12.8" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="16.6" cy="12" r="1.1" fill="currentColor" stroke="none"/></svg></button>
+  <div id="hbTools" role="toolbar" aria-label="部分工具栏" aria-hidden="true">
+    <button class="hbt hbt-sw on" id="hbTl" type="button" role="switch" aria-checked="true" title="全局时间轴：开" aria-label="全局时间轴开关"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M7 8h3.2M7 12h4.8M7 16h3.2"/></svg></button>
+    <button class="hbt hbt-lp" id="hbLp" type="button" role="switch" aria-checked="false" title="低功耗模式：关" aria-label="低功耗模式开关"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="17" height="10" rx="3"/><path d="M22 10.5v3"/><rect class="lp-fill" x="5" y="9.6" width="12" height="4.8" rx="1.2" fill="currentColor" stroke="none"/></svg></button>
+    <button class="hbt" type="button" data-for="cmore" title="更多" aria-label="更多"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5.5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="18.5" cy="12" r="2"/></svg></button>
+  </div>
   <div id="mini" role="button" tabindex="0" aria-label="展开 / 收起面板" aria-expanded="false">
     <div class="mi-tile" id="miTile">文</div>
     <div class="mi-txt"><div class="mi-l">正在播放</div><div class="mi-t" id="miT">—</div><div class="mi-s cnt"></div></div>
     <button class="ppb mi-b" type="button" title="暂停/继续" aria-label="暂停/继续"></button>
     <button class="nxb mi-b" type="button" title="下一句" aria-label="下一句"></button>
   </div>
-  <button id="miSet" type="button" title="设置" aria-label="打开设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
+  <button id="miSet" type="button" title="设置" aria-label="打开设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6.5" width="19" height="11" rx="5.5"/><path class="cbi-play" d="M8.2 9.6v4.8l3.6-2.4z" fill="currentColor" stroke-width="1.2"/><path class="cbi-line" d="M15 12h2.6"/></svg></button>
 </div>
 
 <div id="crop" aria-hidden="true">
@@ -342,9 +635,1232 @@
   </div>
 </div>
 <audio id="audio" preload="metadata"></audio>
+<!-- Sonnet 运行时（Pixi 打包，已打补丁）+ 适配器：各只引入一次，须先于 core.js / player.js / boot.js -->
+<script src="./APP/sonnet/sonnet.js?v=20261025e"></script>
+<script src="./APP/sonnet-adapter.js?v=20261026j"></script>
+<script src="./APP/core.js?v=20261025a"></script>
+<script src="./APP/utils.js?v=20261021m"></script>
+<script src="./APP/player.js?v=20261026b"></script>
+<script src="./APP/renderer.js?v=20261027f"></script>
+<script src="./APP/poster.js?v=20261021m"></script>
+<script src="./APP/timeline.js?v=20261024e"></script>
+<script src="./APP/cards.js?v=20261021m"></script>
+<script src="./APP/pkg-manager.js?v=20261023a"></script>
+<script src="./APP/stage.js?v=20261021m"></script>
+<script src="./APP/background.js?v=20261026e"></script>
+<script src="./APP/storage.js?v=20261021m"></script>
+<script src="./APP/song-library.js?v=20261027c"></script>
+<script src="./APP/nolyric-note.js?v=20261027a"></script>
+<script src="./APP/mini-player.js?v=20261026a"></script>
+<script src="./APP/hub-panel.js?v=20261021m"></script>
+<script src="./APP/menus.js?v=20261025b"></script>
+<script src="./APP/theme-picker.js?v=20261021m"></script>
+<script src="./APP/theme-editor.js?v=20261026b"></script>
+<script src="./APP/textbar.js?v=20261021m"></script>
+<script src="./APP/devtools.js?v=20261026b"></script>
+<script src="./APP/sys-log.js?v=20261023a"></script>
+<script src="./APP/cmd-console.js?v=20261026a"></script>
+<script src="./APP/splash-cover.js?v=20261023a"></script>
+<script src="./APP/changelog.js?v=20261021m"></script>
+<script src="./APP/boot.js?v=20261021m"></script>
+<script src="./APP/ios-music.js?v=20261024b"></script>
+<script src="./APP/local-import.js?v=20261024c"></script>
+<script src="./APP/mode-pref.js?v=20261024a"></script>
+<script src="./APP/ai-ui.js?v=2"></script>
+<script src="./APP/beat.js?v=1"></script>
+<!-- ===== 节拍可视化调试面板 (高定版) ===== -->
+<style id="beatVizCSS">
+#beatViz { 
+  position: fixed; inset: 0; z-index: 999999; 
+  background: radial-gradient(circle at 50% 0%, rgba(20, 24, 40, 0.95), rgba(5, 5, 10, 0.98));
+  -webkit-backdrop-filter: blur(30px) saturate(150%); backdrop-filter: blur(30px) saturate(150%); 
+  display: none; flex-direction: column; padding: env(safe-area-inset-top, 20px) 20px 20px; 
+  color: #fff; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", monospace; 
+  box-sizing: border-box; opacity: 0; transition: opacity 0.4s ease; 
+}
+#beatViz.show { display: flex; opacity: 1; }
+#bvHeader { display: flex; justify-content: space-between; align-items: center; padding-bottom: 24px; }
+#bvHeader h2 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: #fff; }
+#bvHeader h2 em { font-style: normal; color: #8fb0ff; }
+#bvClose { background: rgba(255,255,255,0.08); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+#bvClose:active { background: rgba(255,255,255,0.2); transform: scale(0.9); }
+
+#bvDataGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+.bv-card { 
+  background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 14px 16px; 
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2); backdrop-filter: blur(10px); position: relative; overflow: hidden;
+}
+.bv-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); }
+.bv-lbl { font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; font-weight: 600; }
+.bv-val { font-size: 26px; font-weight: 300; color: #fff; line-height: 1; font-variant-numeric: tabular-nums; }
+.bv-val span { font-size: 13px; color: rgba(255,255,255,0.4); font-weight: 500; margin-left: 4px; }
+
+#bvCanvasBox { 
+  flex: 1; min-height: 250px; border-radius: 24px; position: relative; overflow: hidden; margin-bottom: 20px; 
+  background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05);
+  box-shadow: inset 0 0 40px rgba(0,0,0,0.6);
+}
+#bvCanvas { width: 100%; height: 100%; display: block; }
+
+#bvLogs { 
+  height: 90px; background: rgba(0,0,0,0.4); border-radius: 14px; padding: 10px 14px; 
+  font-size: 11px; overflow-y: auto; color: #4ade80; line-height: 1.6; border: 1px solid rgba(255,255,255,0.05);
+  font-family: "SF Mono", Consolas, monospace; opacity: 0.8;
+}
+#bvLogs div { border-bottom: 1px solid rgba(255,255,255,0.03); padding: 2px 0; }
+#bvLogs::-webkit-scrollbar { width: 4px; }
+#bvLogs::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+</style>
+
+<div id="beatViz" aria-hidden="true">
+  <div id="bvHeader">
+    <h2>Beat <em>Visualizer</em></h2>
+    <button id="bvClose" type="button">✕</button>
+  </div>
+  <div id="bvDataGrid">
+    <div class="bv-card">
+      <div class="bv-lbl">估算 BPM</div>
+      <div class="bv-val" id="bvBpm">--</div>
+    </div>
+    <div class="bv-card">
+      <div class="bv-lbl">能量 STRENGTH</div>
+      <div class="bv-val" id="bvStrength">0.00</div>
+    </div>
+    <div class="bv-card">
+      <div class="bv-lbl">距上一拍</div>
+      <div class="bv-val" id="bvInterval">--<span>ms</span></div>
+    </div>
+    <div class="bv-card">
+      <div class="bv-lbl">总节拍数</div>
+      <div class="bv-val" id="bvCount">0</div>
+    </div>
+  </div>
+  
+  <div id="bvCanvasBox">
+    <canvas id="bvCanvas"></canvas>
+  </div>
+  
+  <div id="bvLogs"></div>
+</div>
+
+<script id="beatVizJS">
+(function(){
+  var viz = document.getElementById('beatViz');
+  var canvas = document.getElementById('bvCanvas');
+  var ctx = canvas.getContext('2d');
+  var elBpm = document.getElementById('bvBpm');
+  var elStr = document.getElementById('bvStrength');
+  var elInt = document.getElementById('bvInterval');
+  var elCount = document.getElementById('bvCount');
+  var elLogs = document.getElementById('bvLogs');
+  
+  if (!viz || !canvas) return;
+
+  window.__showBeatViz = function() {
+    viz.style.display = 'flex';
+    // 触发重排以播放过渡动画
+    void viz.offsetWidth;
+    viz.classList.add('show');
+    viz.setAttribute('aria-hidden', 'false');
+    resizeCanvas();
+    draw();
+  };
+  
+  document.getElementById('bvClose').addEventListener('click', function() {
+    viz.classList.remove('show');
+    viz.setAttribute('aria-hidden', 'true');
+    setTimeout(function(){ viz.style.display = 'none'; }, 400); // 等透明度过渡完再隐藏
+  });
+
+  function resizeCanvas() {
+    if (!viz.classList.contains('show')) return;
+    var rect = canvas.parentNode.getBoundingClientRect();
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  // --- 核心状态数据 ---
+  var targetStrength = 0;     // 节拍触发的目标能量
+  var displayStrength = 0;    // 实际渲染的平滑能量
+  var lastBeatTime = 0;
+  var pulse = 0;              // 脉冲触发值 (1 -> 0)
+  
+  // 频谱柱子数据 (用于底部波浪)
+  var bars = new Array(24).fill(0);
+
+  window.addEventListener('beat', function(e) {
+    var now = performance.now();
+    var diff = lastBeatTime ? Math.round(now - lastBeatTime) : 0;
+    lastBeatTime = now;
+    
+    var s = e.detail && e.detail.strength ? e.detail.strength : 1;
+    var c = e.detail && e.detail.count ? e.detail.count : 0;
+    
+    targetStrength = s;
+    pulse = 1; 
+
+    // 随机给几个频谱柱子注入能量
+    for(var i=0; i<6; i++) {
+      var idx = Math.floor(Math.random() * bars.length);
+      bars[idx] = Math.min(1, s * 0.8 + Math.random() * 0.2);
+    }
+
+    // UI 文字更新
+    elStr.innerText = s.toFixed(2);
+    elStr.style.color = s > 1.2 ? '#ffcc44' : '#fff';
+    elStr.style.textShadow = s > 1.2 ? '0 0 10px rgba(255,204,68,0.5)' : 'none';
+    
+    elInt.innerHTML = (diff ? diff : '--') + '<span>ms</span>';
+    elCount.innerText = c;
+
+    // 日志
+    var log = document.createElement('div');
+    log.innerText = '> beat ' + s.toFixed(2) + (diff ? ' | +' + diff + 'ms' : '');
+    elLogs.appendChild(log);
+    elLogs.scrollTop = elLogs.scrollHeight;
+    if (elLogs.children.length > 20) elLogs.removeChild(elLogs.firstChild);
+  });
+
+  setInterval(function() {
+    if (!viz.classList.contains('show')) return;
+    var bpm = (window.Beat && window.Beat.bpm) || 0;
+    elBpm.innerText = bpm ? bpm : '--';
+  }, 250);
+
+  // --- Canvas 高级渲染 ---
+  function draw() {
+    requestAnimationFrame(draw);
+    if (!viz.classList.contains('show')) return;
+
+    var w = canvas.width / (window.devicePixelRatio || 1);
+    var h = canvas.height / (window.devicePixelRatio || 1);
+    ctx.clearRect(0, 0, w, h);
+
+    // --- 数值平滑插值 (Spring easing) ---
+    // 让圆环的变化不会生硬跳动，而是柔和呼吸
+    pulse *= 0.92; 
+    displayStrength += (targetStrength - displayStrength) * 0.1;
+    targetStrength *= 0.95; // 目标能量随时间回落
+
+    var cx = w / 2;
+    var cy = h / 2 - 30; // 视觉中心稍微偏上
+
+    // --- 1. 环境背景光晕 (随节拍呼吸) ---
+    var glowR = Math.max(w, h) * (0.3 + displayStrength * 0.1);
+    var bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowR);
+    bgGrad.addColorStop(0, 'rgba(143, 176, 255, ' + (0.05 + displayStrength * 0.08) + ')');
+    bgGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // --- 2. 中心双层圆环 ---
+    var baseR = 45;
+    var maxR = baseR + (pulse * 80);
+    
+    // 外圈光晕 (发光效果)
+    ctx.shadowBlur = 20 + (pulse * 30);
+    ctx.shadowColor = 'rgba(143, 176, 255, ' + (pulse * 0.8) + ')';
+    
+    // 外圈扩散
+    ctx.beginPath();
+    ctx.arc(cx, cy, maxR, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(143, 176, 255, ' + (pulse * 0.6) + ')';
+    ctx.lineWidth = 1 + pulse * 4;
+    ctx.stroke();
+
+    // 内圈实心
+    ctx.beginPath();
+    ctx.arc(cx, cy, baseR + (displayStrength * 10), 0, Math.PI * 2);
+    var coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, baseR + 10);
+    coreGrad.addColorStop(0, 'rgba(255, 255, 255, ' + (0.1 + displayStrength * 0.2) + ')');
+    coreGrad.addColorStop(1, 'rgba(143, 176, 255, 0)');
+    ctx.fillStyle = coreGrad;
+    ctx.fill();
+    
+    // 内圈描边
+    ctx.shadowBlur = 0; // 关掉内圈阴影防糊
+    ctx.beginPath();
+    ctx.arc(cx, cy, baseR + (displayStrength * 10), 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255, 255, 255, ' + (0.2 + displayStrength * 0.5) + ')';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // --- 3. 底部频谱矩阵 ---
+    var barW = 6;
+    var gap = 4;
+    var totalWidth = bars.length * (barW + gap) - gap;
+    var startX = cx - totalWidth / 2;
+    var baseY = h - 40;
+    var maxBarH = 60;
+
+    for (var i = 0; i < bars.length; i++) {
+      // 柱子能量衰减
+      bars[i] *= 0.9; 
+      var barH = Math.max(4, bars[i] * maxBarH); // 最低保留 4px 的小圆点
+      
+      var x = startX + i * (barW + gap);
+      var y = baseY - barH;
+      
+      // 渐变色：低音(蓝) 到 高音(紫)
+      var color1 = '#8fb0ff';
+      var color2 = '#b48bff';
+      
+      var lineGrad = ctx.createLinearGradient(x, baseY, x, y);
+      lineGrad.addColorStop(0, color1);
+      lineGrad.addColorStop(1, color2);
+
+      ctx.fillStyle = lineGrad;
+      
+      // 画圆角柱子
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(x, y, barW, barH, 3);
+      } else {
+        ctx.rect(x, y, barW, barH); // 旧浏览器兼容
+      }
+      ctx.fill();
+    }
+  }
+})();
+</script>
 
 
+<!-- 控制栏（#cbar）切标签过场：旧按钮淡出 + 新按钮滑入，保留的按钮平移到新位置；图一⇄图二两个方向都生效 -->
+<style id="cbarSwapCSS">
+#cbar > .cb.cb-ghost{position:absolute!important;margin:0!important;pointer-events:none!important;z-index:1}
+</style>
+<script id="cbarSwapJS">
+(function(){
+  var bar=document.getElementById('cbar'); if(!bar||!bar.animate) return;
+  var snap=[], lastIdx=null, running=[];
+  function spd(){return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui-spd'))||1}
+  function tabIdx(){var n=document.querySelector('#hub .lg-btns .nb.on');var v=n&&n.dataset?n.dataset.i:null;return v==null?null:+v}
+  function visList(){
+    var out=[];
+    for(var i=0;i<bar.children.length;i++){
+      var b=bar.children[i];
+      if(!b.classList.contains('cb')||b.classList.contains('cb-ghost')) continue;
+      if(b.getClientRects().length===0) continue;               // display:none 的不算
+      out.push({el:b,l:b.offsetLeft,t:b.offsetTop,w:b.offsetWidth,h:b.offsetHeight});
+    }
+    return out;
+  }
+  function take(){snap=visList(); lastIdx=tabIdx();}
+  function same(a,b){
+    if(a.length!==b.length) return false;
+    for(var i=0;i<a.length;i++) if(a[i].el!==b[i].el) return false;
+    return true;
+  }
+  function clear(){
+    running.forEach(function(a){try{a.cancel()}catch(e){}});
+    running=[];
+    var g=bar.querySelectorAll('.cb-ghost'); for(var i=0;i<g.length;i++) g[i].remove();
+  }
+  function play(prev,cur,dir){
+    clear();
+    var k=spd(), ease='cubic-bezier(.22,1,.36,1)', shift=14*dir;
+    var inCur=new Set(cur.map(function(o){return o.el}));
+    var inPrev=new Map(prev.map(function(o){return [o.el,o]}));
+    // 1) 旧的、这次消失的按钮：做一个“幽灵”副本留在原位，淡出并往反方向滑走
+    prev.forEach(function(o){
+      if(inCur.has(o.el)) return;
+      var g=o.el.cloneNode(true);
+      g.removeAttribute('id'); g.classList.add('cb-ghost'); g.setAttribute('aria-hidden','true'); g.tabIndex=-1;
+      g.style.cssText='display:flex;left:'+o.l+'px;top:'+o.t+'px;width:'+o.w+'px;height:'+o.h+'px';
+      bar.appendChild(g);
+      var a=g.animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateX('+(-shift)+'px) scale(.85)'}],
+                      {duration:170/k,easing:'ease-out',fill:'forwards'});
+      a.onfinish=a.oncancel=function(){g.remove()};
+      running.push(a);
+    });
+    // 2) 新出现的按钮：从侧面滑入 + 放大淡入，依次错开；保留的按钮从旧位置平移过来
+    var n=0;
+    cur.forEach(function(o){
+      var old=inPrev.get(o.el), a;
+      if(old){
+        var dx=(old.l+old.w/2)-(o.l+o.w/2);
+        if(Math.abs(dx)<0.5) return;
+        a=o.el.animate([{transform:'translateX('+dx+'px)'},{transform:'none'}],{duration:420/k,easing:ease});
+      }else{
+        a=o.el.animate([{opacity:0,transform:'translateX('+shift+'px) scale(.85)'},{opacity:1,transform:'none'}],
+                       {duration:420/k,delay:(60+n*35)/k,easing:ease,fill:'backwards'});
+        n++;
+      }
+      running.push(a);
+    });
+  }
+  new MutationObserver(function(){
+    var prev=snap, cur=visList(), ni=tabIdx();
+    if(same(prev,cur)){ take(); return; }                          // 只是 .on 之类的变化
+    if(!prev.length||!cur.length){ snap=cur; lastIdx=ni; return; } // 面板整体显示/隐藏：不播
+    var dir=(lastIdx!=null&&ni!=null&&ni!==lastIdx)?(ni>lastIdx?1:-1):1;
+    play(prev,cur,dir);
+    snap=cur; lastIdx=ni;
+  }).observe(bar,{attributes:true,subtree:true,attributeFilter:['style','class','hidden']});
+  // 点击/触摸的捕获阶段先拍一张“切换前”的快照（早于任何标签切换逻辑）
+  ['pointerdown','touchstart','pointerup','click'].forEach(function(t){document.addEventListener(t,take,true)});
+  window.addEventListener('resize',take);
+  take(); setTimeout(take,300); setTimeout(take,1200);
+})();
+</script>
 
-<script src="./main.js"></script>
+<!-- 返回键旁的「部分工具栏」胶囊：点返回键展开 / 收起；里面的按钮转发给 #cbar 里对应的真按钮（草图「AI岛UI布局优化」） -->
+<style id="hbToolsCSS">
+#hbTools{position:fixed;z-index:7;left:68px;top:calc(env(safe-area-inset-top,0px) + 12px);height:46px;box-sizing:border-box;padding:0 6px;
+  display:flex;align-items:center;gap:2px;border-radius:23px;color:#fff;
+  background:var(--g-fill);-webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);box-shadow:0 10px 30px rgba(0,0,0,.28);
+  transform-origin:0 50%;transform:translateX(-24px) scale(.35,.8);opacity:0;visibility:hidden;pointer-events:none;
+  transition:transform calc(.3s/var(--ui-spd,1)) ease,opacity calc(.18s/var(--ui-spd,1)) ease,visibility 0s linear calc(.3s/var(--ui-spd,1))}
+body.open #hbTools.is-on{transform:none;opacity:1;visibility:visible;pointer-events:auto;
+  transition:transform calc(.6s/var(--ui-spd,1)) var(--spring),opacity calc(.2s/var(--ui-spd,1)) ease,visibility 0s}
+#hbTools .hbt{flex:none;width:34px;height:34px;padding:0;border:0;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  color:inherit;background:transparent;font:inherit;position:relative;scale:1;touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;
+  transition:scale calc(.4s/var(--ui-spd,1)) var(--spring),background calc(.25s/var(--ui-spd,1)) ease,opacity .2s ease}
+#hbTools .hbt:active{scale:.86;background:rgba(255,255,255,.16);transition:scale calc(.12s/var(--ui-spd,1)) cubic-bezier(.2,.8,.3,1),background .12s ease}
+#hbTools .hbt svg{display:block;width:19px;height:19px}
+#hbTools .hbt.on{background:rgba(125,165,255,.55)}
+#hbTools .hbt.dis{opacity:.32;pointer-events:none}
+#hbTools .hbt.off svg{opacity:.35}
+#hbTools .hbt.has-redo::after{content:"";position:absolute;top:5px;right:7px;width:6px;height:6px;border-radius:50%;background:#8fb0ff}
+html body #hback.hbt-on{background:rgba(125,165,255,.45)}
+/* 展开键动画：箭头弹簧翻转 180°；每次点按整体果冻回弹；工具按钮依次弹入 */
+html body #hback svg{transition:transform calc(.55s/var(--ui-spd,1)) var(--spring)}
+html body #hback.hbt-on svg{transform:rotate(180deg)}
+
+</style>
+<script id="hbToolsJS">
+(function(){
+  var back=document.getElementById('hback'), tools=document.getElementById('hbTools');
+  if(!back||!tools) return;
+  var btns=[].slice.call(tools.querySelectorAll('.hbt[data-for]')), allBtns=[].slice.call(tools.querySelectorAll('.hbt'));
+  function real(b){return document.getElementById(b.getAttribute('data-for'))}
+
+  /* ---- 动画：全部用 Web Animations API + 行内样式，不依赖外部 CSS（避免被别处的 transition/animation 规则盖掉） ---- */
+  var arrow=back.querySelector('svg'), EASE_SPRING='cubic-bezier(.34,1.56,.64,1)';
+  function spd(){return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui-spd'))||1}
+  function anim(open){
+    var k=spd();
+    if(arrow){                                               // 箭头：弹簧翻转 180°（行内 transform 保证最终状态一定生效）
+      arrow.style.transition='transform '+(.55/k)+'s '+EASE_SPRING;
+      arrow.style.transform=open?'rotate(180deg)':'none';
+    }
+    if(back.animate){                                        // 按钮：果冻回弹
+      back.animate([{transform:'scale(.84)'},{transform:'scale(1.14)',offset:.38},{transform:'scale(.97)',offset:.68},{transform:'scale(1)'}],
+                   {duration:550/k,easing:'cubic-bezier(.3,1.3,.5,1)'});
+    }
+    if(open&&tools.animate){                                 // 工具按钮：依次弹入
+      allBtns.forEach(function(b,i){
+        b.animate([{opacity:0,transform:'translateX(-12px) scale(.4)'},{opacity:1,transform:'none'}],
+                  {duration:500/k,delay:(40+i*50)/k,easing:EASE_SPRING,fill:'backwards'});
+      });
+    }
+  }
+
+  /* ---- 展开 / 收起：点返回键 ---- */
+  function setOpen(v){
+    tools.classList.toggle('is-on',v); back.classList.toggle('hbt-on',v);
+    back.setAttribute('aria-expanded',v?'true':'false');
+    back.setAttribute('aria-label',v?'收起部分工具栏':'展开部分工具栏');
+    tools.setAttribute('aria-hidden',v?'false':'true');
+    anim(v);
+  }
+  // 捕获阶段拦截返回键：不再触发原来的「收起面板」，只切换工具栏
+  ['pointerup','mouseup','touchend','click'].forEach(function(t){
+    document.addEventListener(t,function(e){
+      var n=e.target; if(!n||!n.closest||!n.closest('#hback')) return;
+      e.stopImmediatePropagation();
+      if(t==='click'){ e.preventDefault(); setOpen(!tools.classList.contains('is-on')); }
+    },true);
+  });
+  // 面板收起（body 失去 .open）时工具栏一起收起
+  new MutationObserver(function(){ if(!document.body.classList.contains('open')&&tools.classList.contains('is-on')) setOpen(false); })
+    .observe(document.body,{attributes:true,attributeFilter:['class']});
+
+  /* ---- 状态镜像：真按钮的 .on/.off/.has-redo、是否显示 → 对应的小按钮 ---- */
+  function sync(){
+    btns.forEach(function(b){
+      var r=real(b), vis=!!r&&getComputedStyle(r).display!=='none';
+      b.classList.toggle('dis',!vis);
+      ['on','off','has-redo'].forEach(function(c){ b.classList.toggle(c,!!r&&r.classList.contains(c)); });
+    });
+  }
+  var bar=document.getElementById('cbar');
+  if(bar) new MutationObserver(sync).observe(bar,{attributes:true,subtree:true,childList:true,attributeFilter:['class','style']});
+  sync(); setTimeout(sync,600); setTimeout(sync,2000);
+
+  /* ---- 全局时间轴开关：开 = 时间轴可左右滑动隐藏 / 显示；关 = 时间轴隐藏且不能滑出来，小白条也消失 ----
+     状态：body.tl-off（关）/ window.__tlOn；变化时触发 'tlswitch' 事件（detail.on / detail.animate），并记在 localStorage('yiu.tlOn') */
+  var sw=document.getElementById('hbTl');
+  function tlGet(){ try{ return localStorage.getItem('yiu.tlOn')!=='0'; }catch(_){ return true; } }
+  function tlApply(on,animate){
+    window.__tlOn=on;
+    document.body.classList.toggle('tl-off',!on);
+    sw.classList.toggle('on',on);
+    sw.setAttribute('aria-checked',on?'true':'false');
+    sw.title=on?'全局时间轴：开':'全局时间轴：关';
+    if(animate&&sw.animate){
+      var k=spd();
+      sw.animate([{transform:'scale(.78)'},{transform:'scale(1.16)',offset:.4},{transform:'scale(.97)',offset:.72},{transform:'scale(1)'}],{duration:480/k,easing:'cubic-bezier(.3,1.3,.5,1)'});
+      var sv=sw.querySelector('svg');
+      if(sv&&sv.animate) sv.animate([{transform:'rotate(0)'},{transform:'rotate('+(on?'':'-')+'12deg)',offset:.35},{transform:'rotate(0)'}],{duration:480/k,easing:'ease-in-out'});
+    }
+    try{ window.dispatchEvent(new CustomEvent('tlswitch',{detail:{on:on,animate:!!animate}})); }catch(_){}
+  }
+  sw.addEventListener('click',function(e){
+    e.preventDefault(); e.stopPropagation();
+    var on=!document.body.classList.contains('tl-off')?false:true;
+    try{ localStorage.setItem('yiu.tlOn',on?'1':'0'); }catch(_){}
+    tlApply(on,true);
+  });
+  tlApply(tlGet(),false);
+
+  /* ---- 转发：按下 / 抬起 / 点击按原生顺序发给真按钮（撤回长按 = 重做 也走这条） ---- */
+  function fire(el,type,e,extra){
+    var o={bubbles:true,cancelable:true,composed:true,view:window,button:0,clientX:e.clientX,clientY:e.clientY,screenX:e.screenX,screenY:e.screenY};
+    for(var k in extra) o[k]=extra[k];
+    try{ el.dispatchEvent(new PointerEvent(type,o)); }catch(_){}
+  }
+  function fireTouch(el,type,e,id){
+    try{
+      var t=new Touch({identifier:id,target:el,clientX:e.clientX,clientY:e.clientY,screenX:e.screenX,screenY:e.screenY,pageX:e.pageX,pageY:e.pageY});
+      var end=(type==='touchend'||type==='touchcancel');
+      el.dispatchEvent(new TouchEvent(type,{bubbles:true,cancelable:true,composed:true,view:window,
+        touches:end?[]:[t],targetTouches:end?[]:[t],changedTouches:[t]}));
+    }catch(_){}
+  }
+  btns.forEach(function(b){
+    var st=null;
+    b.addEventListener('pointerdown',function(e){
+      if(b.classList.contains('dis')) return;
+      var r=real(b); if(!r) return;
+      st={x:e.clientX,y:e.clientY,id:e.pointerId,moved:false,r:r};
+      try{ b.setPointerCapture(e.pointerId); }catch(_){}
+      fire(r,'pointerdown',e,{pointerId:e.pointerId,pointerType:e.pointerType,isPrimary:true,buttons:1});
+      fireTouch(r,'touchstart',e,e.pointerId+1);
+    });
+    b.addEventListener('pointermove',function(e){
+      if(st&&Math.hypot(e.clientX-st.x,e.clientY-st.y)>10) st.moved=true;
+    });
+    function up(e,cancel){
+      if(!st||e.pointerId!==st.id) return;
+      var r=st.r, moved=st.moved||cancel; st=null;
+      fire(r,cancel?'pointercancel':'pointerup',e,{pointerId:e.pointerId,pointerType:e.pointerType,isPrimary:true,buttons:0});
+      fireTouch(r,cancel?'touchcancel':'touchend',e,e.pointerId+1);
+      if(!moved) r.click();
+    }
+    b.addEventListener('pointerup',function(e){ up(e,false); });
+    b.addEventListener('pointercancel',function(e){ up(e,true); });
+    b.addEventListener('contextmenu',function(e){ e.preventDefault(); });
+    b.addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); });   // 点击由上面的 pointerup 统一转发，防止重复
+  });
+})();
+</script>
+
+<!-- ===== Bravais 墙面（Folia 海报墙风格）===== -->
+<div id="bravais-wall" aria-hidden="true">
+  <div id="bravais-bg"></div>
+
+  <!-- 拼贴画布：磁贴由 JS 动态生成 -->
+  <div id="bravais-canvas"></div>
+
+  <!-- 整体压暗 + 边缘景深 -->
+  <div id="bravais-vignette"></div>
+
+  <!-- 左侧集合标签 -->
+  <div id="bravais-tab"><b>全</b><b>部</b><b>歌</b><b>曲</b></div>
+
+  <!-- 返回 -->
+  <button id="bravais-close" type="button" aria-label="返回">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+  </button>
+
+  <!-- 点开磁贴后的放大卡片 -->
+  <div id="bravais-scrim"></div>
+  <div id="bravais-pop">
+    <img id="bravais-pop-img" alt="">
+    <div class="pop-meta">
+      <div id="bravais-pop-title"></div>
+      <div id="bravais-pop-sub"></div>
+      <div class="pop-act">
+        <button id="bravais-pop-play" type="button"><span class="ic"></span><span class="tx">播放</span></button>
+        <button id="bravais-pop-next" type="button"><span class="ic"><svg viewBox="0 0 24 24"><path d="M5.5 6.6v10.8L14.8 12z" fill="currentColor" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M18.8 6.2v11.6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></span><span class="tx">下一首</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部：进度胶囊 + 右侧悬浮按钮 -->
+  <div id="bravais-dock">
+    <span id="bravais-t-cur">00:00</span>
+    <div id="bravais-track"><i></i></div>
+    <span id="bravais-t-dur">00:00</span>
+  </div>
+  <div id="bravais-fab">
+    <button id="bravais-locate" type="button" aria-label="定位到正在播放"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7.5"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/></svg></button>
+    <button id="bravais-fplay" type="button" aria-label="播放/暂停"></button>
+  </div>
+</div>
+<script src="./APP/bravais.js?v=20261026i"></script>
+<script id="fxScript">
+/* 风格切换过渡：window.StyleFX.swap(commit) + 参数面板测量 + #styleSelTx 文字淡入。
+   不碰 #splash、player.js、音频链路；所有时长都经 T() 除以 --ui-spd。 */
+(function(){
+  "use strict";
+  var EASE="cubic-bezier(.22,1,.36,1)",
+      root=document.documentElement,
+      IDS=["sbox","pbox","starbox","fadebox","typebox","posterbox","fxbox","sonnetbox"],
+      canAnim=typeof Element!=="undefined"&&typeof Element.prototype.animate==="function";
+
+  function spd(){var v=parseFloat(getComputedStyle(root).getPropertyValue("--ui-spd"));return v>0?v:1}
+  function T(ms){return ms/spd()}
+  function reduced(){return !!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches)}
+  function px(v){return parseFloat(v)||0}
+
+  /* =========================================================
+     A. 舞台内容：通用退场 → 提交 → 通用入场
+     只动 opacity / translate / scale（独立属性）：不会覆盖 #one 上 panMove 写的 transform / filter，
+     也不会盖住新风格自己在 .one 子节点上的入场动画。
+     ========================================================= */
+  var OUT={opacity:"0",translate:"0 -6px",scale:"0.97"},
+      RISE=[{opacity:"0",translate:"0 14px",scale:"0.985"},{opacity:"1",translate:"0 0",scale:"1"}],
+      FADE=[{opacity:"0"},{opacity:"1"}],
+      busy=false,enterA=null;
+
+  function hostEl(){                                   // 普通模式内容在 #one，商籁在 #sonnetHost
+    var st=document.getElementById("stage");
+    return document.getElementById(st&&st.classList.contains("mode-sonnet")?"sonnetHost":"one");
+  }
+  function hasContent(h){return !!h&&(h.id==="sonnetHost"||h.childElementCount>0)}
+  function snap(h){var cs=getComputedStyle(h);return{opacity:cs.opacity,translate:cs.translate||"none",scale:cs.scale||"none"}}
+  function wait(a,ms){                                  // 动画结束；页面在后台、时间线不走时用定时器兜底
+    return Promise.race([a.finished.catch(function(){}),new Promise(function(r){setTimeout(r,ms+120)})]);
+  }
+
+  async function swap(commit){
+    if(busy)return;                                     // 已在退场：它结束时按最新的 style 提交，不重复
+    var h=hostEl();
+    if(!canAnim||!hasContent(h)){commit();return}       // 没有可退场的内容（启动首次渲染等）
+    busy=true;
+    var red=reduced(),from=snap(h),dur=red?Math.min(90,T(90)):T(200);
+    if(enterA){enterA.cancel();enterA=null}             // 入场没播完又点了：从当前视觉状态接着退，不跳变
+    var out=h.animate([red?{opacity:from.opacity}:from,red?{opacity:"0"}:OUT],{duration:dur,easing:EASE,fill:"forwards"});
+    await wait(out,dur);                                // 退场结束 → 同一个任务里提交 + 起入场，中间没有空帧
+    busy=false;
+    try{commit()}catch(e){console.error("[StyleFX] commit 失败",e)}
+    var nh=hostEl(),ed=red?Math.min(110,T(110)):T(360),
+        ea=nh.animate(red?FADE:RISE,{duration:ed,easing:EASE});   // 提交后再按 mode-sonnet 重新选宿主
+    enterA=ea;
+    try{out.cancel()}catch(_){}                         // 入场已盖在上面，这时再撤掉退场的 forwards
+    ea.finished.then(function(){if(enterA===ea)enterA=null},function(){});
+  }
+  window.StyleFX={swap:swap};
+
+  /* =========================================================
+     B. 参数面板：量真实 display / 内边距 / 内容高度，ResizeObserver 同步 --fx-h
+     ========================================================= */
+  var boxes=[],dirty=[],raf=0,
+      ro=window.ResizeObserver?new ResizeObserver(function(es){es.forEach(function(e){mark(e.target._fxBox||e.target)})}):null;
+
+  function isHid(el){return el.classList.contains("hide")}
+  function mark(el){                                    // rAF 合并，一帧最多量一次
+    if(dirty.indexOf(el)<0)dirty.push(el);
+    if(!raf)raf=requestAnimationFrame(function(){raf=0;var L=dirty;dirty=[];L.forEach(fit)});
+  }
+  function natural(el){                                 // 暂时撤掉覆盖 + .hide，读「原始 CSS」下的真实值
+    var hid=isHid(el),ps=el.parentNode&&el.parentNode.nodeType===1?getComputedStyle(el.parentNode):null,g=0;
+    el.removeAttribute("data-fxb");
+    if(hid)el.classList.remove("hide");
+    var cs=getComputedStyle(el),d=cs.display;
+    el._fx={pad:px(cs.paddingTop)+px(cs.paddingBottom),bd:px(cs.borderTopWidth)+px(cs.borderBottomWidth),bb:cs.boxSizing==="border-box"};
+    if(ps&&(ps.display.indexOf("grid")>=0||(ps.display.indexOf("flex")>=0&&ps.flexDirection.indexOf("column")===0)))g=px(ps.rowGap);
+    el.style.setProperty("--fx-d",d&&d!=="none"?d:"block");     // #pbox 会量出 grid
+    el.style.setProperty("--fx-g",g+"px");
+    if(hid)el.classList.add("hide");
+    void el.offsetHeight;                               // 先用原始 CSS 刷一次样式，再挂回覆盖 → 不会触发过渡
+    el.setAttribute("data-fxb","");
+  }
+  function fit(el){                                     // 内容高度 → --fx-h（折叠中也能量：scrollHeight 减去当前内边距）
+    var f=el._fx;if(!f)return;
+    var sh=el.scrollHeight;if(!sh)return;               // 祖先不可见：等它显示后 ResizeObserver 会再触发
+    var cs=getComputedStyle(el),cp=px(cs.paddingTop)+px(cs.paddingBottom),
+        h=Math.max(0,sh-cp)+(f.bb?f.pad+f.bd:0);
+    el.style.setProperty("--fx-h",(Math.ceil(h)+1)+"px");
+  }
+  function watchState(el){                              // 仅负责 fx-done（展开到位后放开 overflow）
+    el._fxHid=isHid(el);
+    if(!el._fxHid)el.classList.add("fx-done");
+    new MutationObserver(function(){
+      var h=isHid(el);if(h===el._fxHid)return;          // 只响应 .hide 真正变化（自己加减 fx-done 会再触发，这里直接过滤）
+      el._fxHid=h;clearTimeout(el._fxT);el.classList.remove("fx-done");
+      if(!h){mark(el);el._fxT=setTimeout(function(){if(!isHid(el))el.classList.add("fx-done")},T(420)+80)}
+    }).observe(el,{attributes:true,attributeFilter:["class"]});
+  }
+  function observeKids(el){
+    if(!ro)return;
+    [].forEach.call(el.children,function(c){if(!c._fxBox){c._fxBox=el;ro.observe(c)}});
+  }
+  IDS.forEach(function(id){
+    var el=document.getElementById(id);if(!el)return;
+    boxes.push(el);natural(el);fit(el);watchState(el);
+    if(ro){ro.observe(el);observeKids(el);new MutationObserver(function(){observeKids(el);mark(el)}).observe(el,{childList:true})}
+  });
+  var rz=0;
+  window.addEventListener("resize",function(){          // 断点切换可能改 display / padding：重新量
+    clearTimeout(rz);rz=setTimeout(function(){boxes.forEach(function(el){natural(el);fit(el)})},200);
+  });
+
+  /* =========================================================
+     C. #styleSelTx 文字变化：300ms 淡入 + 小位移（文字没变就不播，避免每次打开下拉都闪）
+     ========================================================= */
+  (function(){
+    var el=document.getElementById("styleSelTx");if(!el||!window.MutationObserver)return;
+    var last=el.textContent;
+    new MutationObserver(function(){
+      var t=el.textContent;if(t===last)return;last=t;
+      if(!canAnim)return;
+      var red=reduced();
+      el.animate(red?FADE:[{opacity:"0",translate:"0 6px"},{opacity:"1",translate:"0 0"}],
+                 {duration:red?Math.min(160,T(160)):T(300),easing:EASE});
+    }).observe(el,{childList:true,characterData:true,subtree:true});
+  })();
+})();
+</script>
+
+
+<style id="qDefCSS">
+#qpop .qdef-row{display:flex;gap:8px;margin-top:8px}
+#qpop .qdef-row .chip{flex:1;padding:9px 0;min-width:0}
+/* 两组开关（默认页面 / 灵动岛样式）：选中 = 亮蓝底 + 白色描边 + 粗体；未选中 = 暗底 + 变淡的字，一眼能分出来 */
+html body #qpop .qdef-row .chip{display:flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 8px;border:none;border-radius:14px;
+  background:rgba(255,255,255,.09);color:rgba(255,255,255,.55);font-weight:500;box-shadow:none;
+  transition:background-color calc(.25s/var(--ui-spd,1)) ease,color calc(.25s/var(--ui-spd,1)) ease,box-shadow calc(.25s/var(--ui-spd,1)) ease}
+html body #qpop .qdef-row .chip.on{background:rgba(110,150,255,.78);color:#fff;font-weight:700;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.7),0 3px 10px rgba(40,80,200,.35)}
+html body #qpop .qdef-row .chip:active{scale:.97}
+body.light-bg #qpop .qdef-row .chip{color:rgba(255,255,255,.6)}
+</style>
+<style id="qPressCSS">
+/* Q弹按压：原来的 :active 直接缩小到 .86 并定住，这里关掉，改由 JS 弹簧动画驱动 */
+html body .cb:active,html body #miSet:active,html body #hbTools .hbt:active,html body #hback:active,html body .mi-b:active,html body #mini:active{scale:1}
+html body .cb,html body #miSet,html body #hbTools .hbt,html body #hback,html body .mi-b{touch-action:none}
+</style>
+<script id="qPressJS">
+(function(){
+  if(!Element.prototype.animate) return;
+  var SEL='.cb:not(.cb-ghost),#miSet,#hbTools .hbt,#hback,.mi-b,#mini';
+  var MIN=0.86, st=new WeakMap();
+  function cur(el){var v=parseFloat(getComputedStyle(el).scale);return isNaN(v)?1:v}
+  function spd(){return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui-spd'))||1}
+  // 形变：沿拖动方向拉长、垂直方向压扁，位移带橡皮筋阻尼（越拉越拉不动）
+  function tf(d){return 'translate('+d.tx+'px,'+d.ty+'px) rotate('+d.a+'rad) scale('+(1+d.k)+','+(1-d.k*.55)+') rotate('+(-d.a)+'rad)'}
+  function calc(dx,dy,big){
+    var dist=Math.hypot(dx,dy)||1, r=4*Math.tanh(dist/50);   // 硬上限 4px，轻微跟手
+    return {tx:dx/dist*r,ty:dy/dist*r,a:Math.atan2(dy,dx),k:Math.min(r/4,1)*(big?.012:.035)};   // 大元素（播放条）拉长幅度更小
+  }
+  function press(el,x,y){
+    var o=st.get(el)||{}; if(o.anim){try{o.anim.cancel()}catch(e){}} if(o.rel){try{o.rel.cancel()}catch(e){}} if(o.back){try{o.back.cancel()}catch(e){}}
+    var from=cur(el), k=spd(), big=el.id==='mini', mn=big?.965:MIN, lo=big?.945:.80, mid=big?.972:.885;   // 播放条很宽，下沉幅度小一些
+    var a=el.animate([{scale:from,offset:0},{scale:lo,offset:.45,easing:'ease-out'},{scale:mid,offset:.75,easing:'ease-in-out'},{scale:mn,offset:1}],
+                     {duration:340/k,easing:'cubic-bezier(.2,.8,.3,1)',fill:'forwards'});
+    st.set(el,{down:performance.now(),anim:a,x:x,y:y,drag:false,d:null});
+  }
+  function move(el,x,y){
+    var o=st.get(el); if(!o||!o.anim) return;
+    var dx=x-o.x, dy=y-o.y;
+    if(!o.drag){ if(Math.hypot(dx,dy)<6) return; o.drag=true; el.style.setProperty('transition','none','important'); }
+    o.d=calc(dx,dy,el.id==='mini'); el.style.transform=tf(o.d);
+  }
+  function release(el){
+    var o=st.get(el); if(!o||!o.anim) return;
+    var wait=o.drag?0:Math.max(0,90-(performance.now()-o.down)), k=spd();
+    setTimeout(function(){
+      var from=cur(el), big=el.id==='mini'; try{o.anim.cancel()}catch(e){}
+      var r=el.animate([{scale:from,offset:0},{scale:big?1.02:1.08,offset:.38,easing:'ease-out'},{scale:big?.992:.975,offset:.68,easing:'ease-in-out'},{scale:1,offset:1,easing:'ease-out'}],
+                       {duration:620/k,easing:'cubic-bezier(.3,0,.3,1)'});
+      o.anim=null; o.rel=r; r.onfinish=r.oncancel=function(){ if(o.rel===r) o.rel=null; };
+      if(o.drag&&o.d){
+        // 松手：像果冻一样反向弹过去 → 再弹回 → 归位
+        var d=o.d, h=function(f,kk){return 'translate('+(-d.tx*f)+'px,'+(-d.ty*f)+'px) rotate('+d.a+'rad) scale('+(1+d.k*kk)+','+(1-d.k*kk*.55)+') rotate('+(-d.a)+'rad)'};
+        var b=el.animate([{transform:tf(d),offset:0},{transform:h(.3,-.5),offset:.3,easing:'ease-out'},{transform:h(-.1,.25),offset:.58,easing:'ease-in-out'},
+                          {transform:h(.05,-.1),offset:.8,easing:'ease-in-out'},{transform:'none',offset:1}],
+                         {duration:720/k,easing:'cubic-bezier(.3,0,.3,1)'});
+        el.style.transform=''; el.style.removeProperty('transition');
+        o.back=b; b.onfinish=b.oncancel=function(){ if(o.back===b) o.back=null; };
+        o.d=null;
+        o.wasDrag=performance.now();
+      }
+    },wait);
+  }
+  var active=null;
+  document.addEventListener('pointerdown',function(e){
+    var el=e.target.closest&&e.target.closest(SEL); if(!el||el.disabled) return;
+    active=el; press(el,e.clientX,e.clientY);
+  },true);
+  window.addEventListener('pointermove',function(e){ if(active) move(active,e.clientX,e.clientY); },true);
+  function up(){ if(active){var el=active; active=null; var o=st.get(el); if(o&&o.drag) o.dragEnd=performance.now(); release(el);} }
+  ['pointerup','pointercancel'].forEach(function(t){window.addEventListener(t,up,true)});
+  // 拖动过的松手不算点击（避免拖一下就触发按钮功能）
+  window.addEventListener('click',function(e){
+    var el=e.target.closest&&e.target.closest(SEL); if(!el) return;
+    var o=st.get(el); if(o&&o.dragEnd&&performance.now()-o.dragEnd<400){ o.dragEnd=0; e.stopImmediatePropagation(); e.preventDefault(); }
+  },true);
+})();
+</script>
+<style id="iconAnimCSS">
+/* ===== 图标点击 / 滑到动画 ===== */
+#lg .nb svg *,#cbar .cb svg *,#miSet svg *{transform-box:fill-box;transform-origin:center}
+#lg .nb.ia svg,#cbar .cb.ia svg{animation:iaPop .5s cubic-bezier(.34,1.56,.64,1)}
+@keyframes iaPop{0%{transform:scale(1)}35%{transform:scale(1.28)}100%{transform:scale(1)}}
+/* 调节：三个滑块左右滑 */
+#lg .nb[data-i="3"].ia svg circle:nth-of-type(1){animation:iaS1 .6s cubic-bezier(.34,1.56,.64,1)}
+#lg .nb[data-i="3"].ia svg circle:nth-of-type(2){animation:iaS2 .6s cubic-bezier(.34,1.56,.64,1)}
+#lg .nb[data-i="3"].ia svg circle:nth-of-type(3){animation:iaS3 .6s cubic-bezier(.34,1.56,.64,1)}
+@keyframes iaS1{0%{transform:translateX(0)}40%{transform:translateX(5px)}100%{transform:translateX(0)}}
+@keyframes iaS2{0%{transform:translateX(0)}40%{transform:translateX(-6px)}100%{transform:translateX(0)}}
+@keyframes iaS3{0%{transform:translateX(0)}40%{transform:translateX(7px)}100%{transform:translateX(0)}}
+/* 风格：大星转一圈，小星弹出 */
+#lg .nb[data-i="1"].ia svg path:nth-of-type(1){animation:iaSpin .6s cubic-bezier(.34,1.3,.64,1)}
+#lg .nb[data-i="1"].ia svg path:nth-of-type(2){animation:iaTwk .6s ease-out}
+@keyframes iaSpin{0%{transform:rotate(0) scale(1)}50%{transform:rotate(100deg) scale(1.2)}100%{transform:rotate(180deg) scale(1)}}
+@keyframes iaTwk{0%{transform:scale(1)}30%{transform:scale(0)}65%{transform:scale(1.7)}100%{transform:scale(1)}}
+/* 背景：太阳跳起，山峦起伏 */
+#lg .nb[data-i="2"].ia svg rect~circle{animation:iaSun .6s cubic-bezier(.34,1.56,.64,1)}
+#lg .nb[data-i="2"].ia svg rect~path{animation:iaMtn .6s ease-out}
+@keyframes iaSun{0%{transform:translate(0,0)}40%{transform:translate(1px,-3.5px)}100%{transform:translate(0,0)}}
+@keyframes iaMtn{0%{transform:scaleY(1)}40%{transform:scaleY(.6)}100%{transform:scaleY(1)}}
+/* 文字：三行依次从左写入 */
+#lg .nb.ia svg .a-l1,#lg .nb.ia svg .a-l2,#lg .nb.ia svg .a-l3{transform-origin:left center;animation:iaLine .5s cubic-bezier(.22,1,.36,1) backwards}
+#lg .nb.ia svg .a-l2{animation-delay:.08s}#lg .nb.ia svg .a-l3{animation-delay:.16s}
+@keyframes iaLine{0%{transform:scaleX(0);opacity:0}100%{transform:scaleX(1);opacity:1}}
+/* 波形：描边画出来 */
+#cbar #cq.ia svg path{stroke-dasharray:100;animation:iaDraw .7s cubic-bezier(.4,0,.2,1)}
+@keyframes iaDraw{0%{stroke-dashoffset:100}100%{stroke-dashoffset:0}}
+/* 调色盘 / 其他控制栏按钮：摇摆 + 色点依次弹出 */
+#cbar .cb.ia:not(#cq) svg{animation:iaWob .6s cubic-bezier(.34,1.56,.64,1)}
+@keyframes iaWob{0%{transform:rotate(0) scale(1)}30%{transform:rotate(-22deg) scale(1.2)}65%{transform:rotate(12deg) scale(1.1)}100%{transform:rotate(0) scale(1)}}
+#cbar .cb.ia:not(#cq) svg circle{animation:iaDot .5s cubic-bezier(.34,1.56,.64,1) backwards}
+#cbar .cb.ia:not(#cq) svg circle:nth-of-type(2){animation-delay:.06s}
+#cbar .cb.ia:not(#cq) svg circle:nth-of-type(3){animation-delay:.12s}
+#cbar .cb.ia:not(#cq) svg circle:nth-of-type(4){animation-delay:.18s}
+#cbar .cb.ia:not(#cq) svg circle:nth-of-type(5){animation-delay:.24s}
+@keyframes iaDot{0%{transform:scale(0)}100%{transform:scale(1)}}
+/* 「···」(#cmore)：展开时 .on 会把图标转 90°；这里不再叠加摇摆动画（否则动画结束瞬间会跳成竖点），改成带回弹的旋转过渡 */
+#cbar #cmore.ia svg,#cbar #cmore.ia svg circle{animation:none!important}
+html body #cbar>#cmore svg{transition:transform calc(.6s/var(--ui-spd,1)) cubic-bezier(.34,1.56,.64,1)}
+html body #cbar>#cmore.on svg{transform:rotate(90deg)}
+/* 调色盘（#cfs 用 CSS mask 画的，整体做动画）：倾斜蘸色再回正 */
+#cbar #cfs.ia::after{transform-origin:center;animation:iaPal .65s cubic-bezier(.34,1.56,.64,1)}
+@keyframes iaPal{0%{transform:rotate(0) scale(1)}25%{transform:rotate(-28deg) scale(1.25)}55%{transform:rotate(14deg) scale(1.12) translateY(-1px)}100%{transform:rotate(0) scale(1)}}
+/* 设置键：面板打开后不再消失，保持显示、可点击 */
+body.open:not(.mx):not(.immerse) #miSet,body.hubClosing:not(.mx):not(.immerse) #miSet{opacity:1!important;scale:1;visibility:visible!important;pointer-events:auto!important;transition:scale calc(.12s/var(--ui-spd,1)) cubic-bezier(.2,.8,.3,1)!important}
+/* 设置（控制栏）图标 */
+#miSet.ia svg .cbi-play{animation:iaPlay .55s cubic-bezier(.34,1.56,.64,1)}
+#miSet.ia svg .cbi-line{animation:iaLn .55s cubic-bezier(.22,1,.36,1);transform-origin:left center}
+#miSet.ia svg{animation:iaPop .5s cubic-bezier(.34,1.56,.64,1)}
+@keyframes iaPlay{0%{transform:translateX(0)}40%{transform:translateX(4px) scale(1.15)}100%{transform:translateX(0)}}
+@keyframes iaLn{0%{transform:scaleX(0)}100%{transform:scaleX(1)}}
+@media (prefers-reduced-motion:reduce){#lg .nb.ia svg,#lg .nb.ia svg *,#cbar .cb.ia svg,#cbar .cb.ia svg *,#cbar .cb.ia::after,#miSet.ia svg,#miSet.ia svg *{animation:none!important}}
+</style>
+<script id="iconAnimJS">
+(function(){
+  var last=new WeakMap();
+  function pulse(el){
+    if(!el) return; var t=Date.now();
+    if(t-(last.get(el)||0)<260) return; last.set(el,t);
+    el.classList.remove('ia'); void el.offsetWidth; el.classList.add('ia');
+    clearTimeout(el._iaT); el._iaT=setTimeout(function(){el.classList.remove('ia')},900);
+  }
+  // 设置键：面板已打开时，点它 = 关闭面板（转发给折叠键，走原有的收起动画）
+  window.addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('#miSet');
+    if(!b||!document.body.classList.contains('open')) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    pulse(b);
+    var f=document.getElementById('cfold'); if(f) f.click();
+  },true);
+  // 点击：控制栏（调色盘/波形/···）、设置、顶部标签
+  document.addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('#cbar .cb,#miSet,#lg .nb'); if(!b) return;
+    if(b.classList.contains('ppb')||b.classList.contains('nxb')) return;
+    pulse(b);
+  },true);
+  // 滑动顶部标签：滑块经过哪个图标，哪个图标就动
+  var lg=document.getElementById('lg'), thumb=document.getElementById('thumb'); if(!lg||!thumb) return;
+  var down=false, raf=0, stopT=0, cur=null;
+  function nearest(){
+    var tr=thumb.getBoundingClientRect(); if(!tr.width) return null;
+    var cx=tr.left+tr.width/2, best=null, bd=1e9, nbs=lg.querySelectorAll('.nb');
+    for(var i=0;i<nbs.length;i++){var r=nbs[i].getBoundingClientRect(),d=Math.abs(r.left+r.width/2-cx); if(d<bd){bd=d;best=nbs[i]}}
+    return best;
+  }
+  function loop(){
+    var n=nearest(); if(n&&n!==cur){ if(cur!==null) pulse(n); cur=n; }
+    if(down) raf=requestAnimationFrame(loop);
+  }
+  function start(){ clearTimeout(stopT); cur=nearest(); down=true; cancelAnimationFrame(raf); raf=requestAnimationFrame(loop); }
+  function end(){ stopT=setTimeout(function(){ down=false; var n=nearest(); if(n&&n!==cur) pulse(n); cur=null; },450); }
+  // 松手后滑块还会回弹吸附，继续跟踪 450ms
+  lg.addEventListener('pointerdown',start,true);
+  ['pointerup','pointercancel'].forEach(function(t){window.addEventListener(t,function(){ if(down) { var d=down; (function(){ var t0=Date.now(); (function tick(){ var n=nearest(); if(n&&n!==cur){pulse(n);cur=n} if(Date.now()-t0<450) requestAnimationFrame(tick); })(); })(); down=false; cancelAnimationFrame(raf); } })});
+  // 兜底：.on 切换（含代码切换标签）
+  new MutationObserver(function(ms){ ms.forEach(function(m){ var el=m.target; if(el.classList&&el.classList.contains('on')&&el.classList.contains('nb')) pulse(el); }); }).observe(lg,{attributes:true,subtree:true,attributeFilter:['class']});
+})();
+</script>
+<script id="defTabJS">
+(function(){
+  var KM='yiu.defTab', KL='yiu.lastTab', BG='2';
+  function get(k,d){try{var v=localStorage.getItem(k);return v==null?d:v}catch(e){return d}}
+  function set(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+  var mode=get(KM,'bg'); if(mode!=='bg'&&mode!=='last') mode='bg';   // 默认：图片；存的值不合法也回到图片
+  if(get(KM,null)===null) set(KM,mode);                               // 第一次启动就把默认值写下来，之后用户改了就按用户的
+  var seg=document.getElementById('qDefTab'), lg=document.getElementById('lg');
+  function paint(){ if(!seg) return; [].forEach.call(seg.querySelectorAll('button'),function(c){var on=c.dataset.v===mode;c.classList.toggle('on',on);c.setAttribute('aria-checked',on)}); seg.classList.toggle('is-last',mode==='last'); var tip=document.getElementById('qDefTip'); if(tip) tip.textContent=mode==='last'?'每次打开面板，回到你上次停留的页面。':'每次打开面板，都先显示图片页。'; }
+  paint();
+  if(seg) seg.addEventListener('click',function(e){var c=e.target.closest('button');if(!c)return;mode=c.dataset.v;set(KM,mode);paint()});
+  if(!lg) return;
+  // 记录最近停留的标签
+  new MutationObserver(function(ms){ms.forEach(function(m){var n=m.target;if(n.classList&&n.classList.contains('nb')&&n.classList.contains('on')&&n.dataset.i!=null) set(KL,n.dataset.i)})})
+    .observe(lg,{attributes:true,subtree:true,attributeFilter:['class']});
+  // 每次打开面板：切到默认页面
+  var was=document.body.classList.contains('open');
+  new MutationObserver(function(){
+    var now=document.body.classList.contains('open');
+    if(now&&!was){
+      var idx=mode==='last'?get(KL,BG):BG;
+      var nb=lg.querySelector('.nb[data-i="'+idx+'"]');
+      if(nb&&!nb.classList.contains('on')) nb.click();
+    }
+    was=now;
+  }).observe(document.body,{attributes:true,attributeFilter:['class']});
+})();
+</script>
+<style id="aiStyleCSS">
+/* 灵动岛「高斯模糊」样式：材质、模糊度、透明度与其它 UI 完全一致（直接用同一组变量，跟着「模糊强度」走） */
+html body.ai-blur .aiui-pill .aiui-glass,html body.ai-blur .aiui-pill.is-awake .aiui-glass{
+  background:var(--g-fill2)!important;-webkit-backdrop-filter:var(--g-blur)!important;backdrop-filter:var(--g-blur)!important;
+  box-shadow:var(--g-rim),0 3px 10px rgba(0,0,0,.18)!important}
+</style>
+<script id="aiStyleJS">
+(function(){
+  var K='yiu.aiStyle', box=document.getElementById('qAiStyle');
+  function get(){try{var v=localStorage.getItem(K);return v==='blur'?'blur':'black'}catch(e){return 'black'}}
+  function apply(v){
+    document.body.classList.toggle('ai-blur',v==='blur');
+    if(!box) return;
+    [].forEach.call(box.querySelectorAll('button'),function(b){var on=b.dataset.v===v;b.classList.toggle('on',on);b.setAttribute('aria-checked',on)});
+  }
+  apply(get());
+  if(box) box.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var v=b.dataset.v;try{localStorage.setItem(K,v)}catch(er){} apply(v)});
+})();
+</script>
+<style id="hbLpCSS">
+/* 低功耗开关：和 iOS 低电量模式一样，开启后变黄 */
+#hbTools .hbt.hbt-lp .lp-fill{transform-box:fill-box;transform-origin:left center;transform:scaleX(.35);transition:transform calc(.45s/var(--ui-spd,1)) cubic-bezier(.34,1.56,.64,1)}
+#hbTools .hbt.hbt-lp.lp-on .lp-fill{transform:scaleX(1)}
+html body #hbTools .hbt.hbt-lp{transition:scale calc(.4s/var(--ui-spd,1)) var(--spring),background calc(.3s/var(--ui-spd,1)) ease,color calc(.3s/var(--ui-spd,1)) ease}
+/* ===== 低功耗：在「性能优化」基础上再省一层 ===== */
+body.low-power .aiui-halo{display:none!important}                                  /* 灵动岛外发光（blur 滤镜，最费电） */
+body.low-power .aiui-swirl,body.low-power .aiui-glow,body.low-power .aiui-spark{animation-play-state:paused!important}
+body.low-power .aiui-pill:not(.is-dancing):not(.is-dragging){animation:none!important}   /* 灵动岛待机漂浮 */
+body.low-power #splash .sp-ring i,body.low-power #splash .sp-ring b{animation-play-state:paused!important}
+body.low-power *,body.low-power *::before,body.low-power *::after{will-change:auto!important}
+/* 开关切换时的过渡：模糊、底色、阴影、透明度一起缓慢变化，而不是瞬间跳变（只在切换后的 0.8s 内生效） */
+body.lp-switching :is(.dock,.lg-bg,.lg-thumb,.chip,.ctl button,.cb,.mini,#mini,#miSet,#hbTools,#hback,.nb,.aiui-glass,#hub,#tlLens,.theme-picker,#qpop,.card){
+  transition:background-color .55s ease,box-shadow .55s ease,border-color .55s ease,opacity .55s ease,color .4s ease,-webkit-backdrop-filter .55s ease,backdrop-filter .55s ease,filter .55s ease!important}
+body.lp-switching .aiui-pill{transition:opacity .5s ease,filter .5s ease!important}
+/* 低功耗说明弹窗：复用全局 .pkg-dlg 的磨砂玻璃（同一套底色 / 模糊 / 圆角 / 按钮），只补内容排版 */
+html body .pkg-dlg.lpd{-webkit-backdrop-filter:var(--g-blur,blur(23px))!important;backdrop-filter:var(--g-blur,blur(23px))!important;text-align:left}
+.pkg-dlg.lpd .lpd-h{display:flex;align-items:center;gap:10px;margin:2px 6px 12px}
+.pkg-dlg.lpd .lpd-ic{flex:none;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#ffd60a;color:#1c1c1e;box-shadow:0 2px 10px rgba(255,214,10,.35)}
+.pkg-dlg.lpd .lpd-ic svg{width:19px;height:19px}
+.pkg-dlg.lpd .lpd-t{font-size:16px;font-weight:700;letter-spacing:.3px}
+.pkg-dlg.lpd ul{list-style:none;margin:0 6px 16px;padding:0;display:flex;flex-direction:column;gap:9px}
+.pkg-dlg.lpd li{position:relative;padding-left:16px;font-size:13.5px;line-height:1.5;color:rgba(255,255,255,.82)}
+.pkg-dlg.lpd li::before{content:"";position:absolute;left:3px;top:.6em;width:6px;height:6px;border-radius:50%;background:#ffd60a}
+.pkg-dlg.lpd .lpd-s{margin:0 6px 14px;font-size:12px;color:rgba(255,255,255,.5)}
+/* 修复弹窗“先高透、突然变模糊”：backdrop-filter 的祖先元素只要 opacity<1，模糊就取不到背景，等 opacity 到 1 才突然生效。
+   所以遮罩层不再做 opacity 过渡（改为只渐变它自己的底色），淡入淡出放到弹窗本体上，模糊从第一帧就在。 */
+.pkg-dlg-mask.lpd-mask{opacity:1!important;background:rgba(0,0,0,0)!important;transition:background calc(.28s/var(--ui-spd,1)) ease!important}
+.pkg-dlg-mask.lpd-mask.show{background:rgba(0,0,0,.28)!important}
+.pkg-dlg-mask.lpd-mask .pkg-dlg{opacity:0;transition:transform calc(.4s/var(--ui-spd,1)) var(--spring-pop,cubic-bezier(.32,.72,0,1)),opacity calc(.24s/var(--ui-spd,1)) ease}
+.pkg-dlg-mask.lpd-mask.show .pkg-dlg{opacity:1;transform:none}
+html body #hbTools .hbt.hbt-lp.lp-on{background:#ffd60a;color:#1c1c1e;box-shadow:0 2px 10px rgba(255,214,10,.35)}
+</style>
+<script id="hbLpJS">
+(function(){
+  var btn=document.getElementById('hbLp'); if(!btn) return;
+  function cb(){return document.getElementById('performanceMode')}
+  function isOn(){var c=cb(); return c?!!c.checked:document.body.classList.contains('performance-mode')}
+  /* ---- 低功耗：限帧到约 30fps（所有 requestAnimationFrame 动画：渲染器、灵动岛、进度条…） ---- */
+  var rawRaf=window.requestAnimationFrame.bind(window), rawCancel=window.cancelAnimationFrame.bind(window);
+  var capFps=false, seq=1e9, map=Object.create(null), lastTs=-1, lastBucket=-1, lastOk=true;
+  function allowed(ts){
+    if(ts===lastTs) return lastOk;                       // 同一帧里的多个回调共用同一个判断
+    var b=Math.floor(ts/33.34); lastTs=ts; lastOk=(b!==lastBucket); if(lastOk) lastBucket=b; return lastOk;
+  }
+  window.requestAnimationFrame=function(fn){
+    if(!capFps) return rawRaf(fn);
+    var id=++seq;
+    (function go(){
+      map[id]=rawRaf(function(ts){
+        if(!(id in map)) return;
+        if(!capFps||allowed(ts)){ delete map[id]; fn(ts); } else go();
+      });
+    })();
+    return id;
+  };
+  window.cancelAnimationFrame=function(id){
+    if(id in map){ rawCancel(map[id]); delete map[id]; } else rawCancel(id);
+  };
+
+  var swT=0;
+  function paint(animate){
+    var on=isOn(), was=btn.classList.contains('lp-on');
+    btn.classList.toggle('lp-on',on);
+    btn.setAttribute('aria-checked',on?'true':'false');
+    btn.title=on?'低功耗模式：开':'低功耗模式：关';
+    if(was!==on&&animate){                               // 真正发生切换：先开过渡，再改状态
+      document.body.classList.add('lp-switching');
+      clearTimeout(swT); swT=setTimeout(function(){document.body.classList.remove('lp-switching')},850);
+    }
+    document.body.classList.toggle('low-power',on);
+    capFps=on; window.__lowPower=on;
+    if(animate&&was!==on&&btn.animate){
+      var k=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui-spd'))||1;
+      btn.animate([{transform:'scale(.78)'},{transform:'scale(1.16)',offset:.4},{transform:'scale(.97)',offset:.72},{transform:'scale(1)'}],{duration:480/k,easing:'cubic-bezier(.3,1.3,.5,1)'});
+    }
+  }
+
+  /* ---- 打开低功耗时弹出说明 ---- */
+  function showDlg(){
+    if(document.querySelector('.pkg-dlg-mask.lpd-mask')) return;
+    var m=document.createElement('div'); m.className='pkg-dlg-mask lpd-mask'; m.setAttribute('role','dialog'); m.setAttribute('aria-modal','true');
+    m.innerHTML='<div class="pkg-dlg lpd">'+
+      '<div class="lpd-h"><span class="lpd-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="17" height="10" rx="3"/><path d="M22 10.5v3"/><rect x="5" y="9.6" width="12" height="4.8" rx="1.2" fill="currentColor" stroke="none"/></svg></span><span class="lpd-t">低功耗模式已开启</span></div>'+
+      '<ul><li>画面刷新降到约 30 帧</li><li>关闭毛玻璃模糊、高光描边与阴影</li><li>灵动岛的外发光与待机动画暂停</li><li>开屏等装饰动画暂停</li></ul>'+
+      '<div class="lpd-s">再次点击电池图标即可关闭</div>'+
+      '<div class="row"><button type="button" class="primary">知道了</button></div></div>';
+    document.body.appendChild(m);
+    void m.offsetWidth; m.classList.add('show');
+    function close(){ m.classList.remove('show'); setTimeout(function(){m.remove()},320); }
+    m.addEventListener('click',function(e){ if(e.target===m||e.target.closest('button')) close(); });
+  }
+  btn.addEventListener('click',function(e){
+    e.preventDefault(); e.stopPropagation();
+    document.body.classList.add('lp-switching'); clearTimeout(swT); swT=setTimeout(function(){document.body.classList.remove('lp-switching')},850);
+    var c=cb();
+    if(c) c.click();                                   // 走「更多」里「性能优化」原有的开关逻辑（含保存）
+    else document.body.classList.toggle('performance-mode');
+    // 保险：如果原逻辑没有把 body 的 performance-mode 类同步过来，这里补上（样式表里的省电效果全靠这个类）
+    setTimeout(function(){ var on=isOn(); document.body.classList.toggle('performance-mode',on); paint(false); },60);
+    paint(true);
+    if(isOn()) setTimeout(showDlg,140);
+  });
+  // 在「更多」里改了性能优化 → 这里同步
+  document.addEventListener('change',function(e){ if(e.target&&e.target.id==='performanceMode') paint(true); },true);
+  new MutationObserver(function(){paint(false)}).observe(document.body,{attributes:true,attributeFilter:['class']});
+  paint(false); setTimeout(paint,300); setTimeout(paint,1200); setTimeout(paint,2500);
+})();
+</script>
+
+<!-- ===== 选歌词页（音乐模式 + 文字标签）：隐藏 #cbar 那排（调色盘/波形/···），列表区同步长高；切走时恢复；两个方向都有过渡动画 =====
+     style.css 里 #cbar 的高度、#cdock 的下边距、.dock 的 flex-basis / max-height 都是 !important，Web Animations 压不过去，
+     所以动画驱动一个注册过的数字变量 --cbk（1 = 显示，0 = 隐藏），上面这几个值都写成 calc(原值 × --cbk)。 -->
+<style id="cbarHideCSS">
+@property --cbk{syntax:"<number>";inherits:true;initial-value:1}
+html body #hub.cb-hid #cdock{margin-bottom:calc(var(--cb-mb,8px) * var(--cbk))!important}
+html body #hub.cb-hid #cbar{height:calc(var(--cb-h,40px) * var(--cbk))!important;min-height:0!important;overflow:hidden!important;pointer-events:none!important;
+  opacity:min(1,calc(var(--cbk) * 1.6));transform:translateY(calc((1 - var(--cbk)) * -8px)) scale(calc(.96 + .04 * var(--cbk)));transform-origin:50% 0}
+html body #hub.cb-hid.cb-off #cbar{visibility:hidden}
+html body #hub.cb-hid .dock{flex-basis:calc(var(--cb-db,170px) + (1 - var(--cbk)) * var(--cb-free,48px))!important;
+  max-height:calc(var(--cb-dm,190px) + (1 - var(--cbk)) * var(--cb-free,48px))!important}
+html body #hub.cb-hid :is(.dock,#cdock,#cbar){transition:none!important}
+</style>
+<script id="cbarHideJS">
+(function(){
+  var hub=document.getElementById('hub'), bar=document.getElementById('cbar'), cdock=document.getElementById('cdock'),
+      dock=hub&&hub.querySelector('.dock'), pg0=document.getElementById('pg0');
+  if(!hub||!bar||!cdock||!dock||!pg0) return;
+  var away=false, anim=null, raf=0;
+  function spd(){return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui-spd'))||1}
+  function reduce(){return window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches}
+  /* 该不该隐藏：音乐模式 + 文字页（pg0）在显示，也就是选歌词的那一页 */
+  function want(){ return document.body.classList.contains('music-mode')&&!pg0.classList.contains('hide'); }
+  function curK(){var v=parseFloat(getComputedStyle(hub).getPropertyValue('--cbk')); return isNaN(v)?1:v}
+  function measure(){                          // 在「完全显示」的状态下量一次原始尺寸，写成变量给 CSS 用
+    var h=parseFloat(getComputedStyle(bar).height)||40, mb=parseFloat(getComputedStyle(cdock).marginBottom)||0, ds=getComputedStyle(dock);
+    var fb=parseFloat(ds.flexBasis); if(isNaN(fb)) fb=dock.offsetHeight;
+    var mh=parseFloat(ds.maxHeight); if(isNaN(mh)) mh=99999;
+    hub.style.setProperty('--cb-h',h+'px'); hub.style.setProperty('--cb-mb',mb+'px'); hub.style.setProperty('--cb-free',(h+mb)+'px');
+    hub.style.setProperty('--cb-db',fb+'px'); hub.style.setProperty('--cb-dm',mh+'px');
+  }
+  function finish(hidden){
+    if(hidden){ hub.style.setProperty('--cbk','0'); hub.classList.add('cb-off'); }
+    else{ ['--cbk','--cb-h','--cb-mb','--cb-free','--cb-db','--cb-dm'].forEach(function(p){hub.style.removeProperty(p)}); hub.classList.remove('cb-hid','cb-off'); }
+  }
+  function kids(to,k){                         // 按钮自己也轻轻弹一下（淡入时依次错开）
+    var n=0;
+    [].forEach.call(bar.querySelectorAll('.cb:not(.cb-ghost)'),function(b){ if(!b.animate||b.getClientRects().length===0) return;
+      b.animate([{opacity:to?0:1,transform:'scale('+(to?.7:1)+')'},{opacity:to?1:0,transform:'scale('+(to?1:.7)+')'}],
+        {duration:(to?380:200)/k,delay:to?(90+n*40)/k:0,easing:to?'cubic-bezier(.34,1.56,.64,1)':'ease-out',fill:'backwards'}); n++; });
+  }
+  function apply(next){
+    if(next===away) return;
+    var visible=document.body.classList.contains('open')&&hub.getClientRects().length>0&&bar.offsetWidth>0;
+    var animate=visible&&hub.animate&&!reduce()&&!document.body.classList.contains('performance-mode');
+    var cur=curK();
+    if(anim){try{anim.cancel()}catch(e){} anim=null}      // 打断：从当前进度接着走，不跳变
+    away=next;
+    if(next&&!hub.classList.contains('cb-hid')){ measure(); hub.classList.add('cb-hid'); cur=1; }
+    hub.classList.remove('cb-off');
+    hub.style.setProperty('--cbk',String(cur));
+    if(!animate){ finish(next); return; }
+    var k=spd(), a=hub.animate([{'--cbk':cur},{'--cbk':next?0:1}],{duration:(next?340:460)/k,easing:'cubic-bezier(.22,1,.36,1)'});
+    kids(!next,k);
+    a.onfinish=function(){ if(anim!==a) return; anim=null; finish(next); };
+    a.oncancel=function(){ if(anim===a) anim=null; };
+    anim=a;
+  }
+  function update(){ cancelAnimationFrame(raf); raf=requestAnimationFrame(function(){ apply(want()); }); }
+  new MutationObserver(update).observe(pg0,{attributes:true,attributeFilter:['class']});
+  new MutationObserver(update).observe(document.body,{attributes:true,attributeFilter:['class']});
+  update(); setTimeout(update,300); setTimeout(update,1200);
+})();
+</script>
+
+<!-- ===== 顶部 4 个标签（#lg）触摸兜底 =====
+     style.css 里 .nav 已经是 touch-action:none，所以问题不在浏览器接管手势这一层。
+     这里加一层兜底：一次明显的点按 / 横滑结束后，如果原有逻辑没有切换标签（滑块没动、.on 没变），就按手指位置补一次切换。 -->
+<style id="lgTouchCSS">
+#lg .nb{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+</style>
+<script id="lgTouchJS">
+(function(){
+  var lg=document.getElementById('lg'), thumb=document.getElementById('thumb'); if(!lg||!thumb) return;
+  var g=null;
+  function nbs(){return [].slice.call(lg.querySelectorAll('.nb'))}
+  function nearest(x){
+    var best=null,bd=1e9; nbs().forEach(function(n){var r=n.getBoundingClientRect(),d=Math.abs(r.left+r.width/2-x); if(d<bd){bd=d;best=n}});
+    return best;
+  }
+  function tl(){return thumb.getBoundingClientRect().left}
+  lg.addEventListener('pointerdown',function(e){
+    if(e.pointerType==='mouse'&&e.button!==0) return;
+    g={id:e.pointerId,x0:e.clientX,y0:e.clientY,x:e.clientX,y:e.clientY,t0:performance.now(),th0:tl(),thMoved:false,on0:lg.querySelector('.nb.on')};
+  },true);
+  window.addEventListener('pointermove',function(e){
+    if(!g||e.pointerId!==g.id) return;
+    g.x=e.clientX; g.y=e.clientY;
+    if(Math.abs(tl()-g.th0)>4) g.thMoved=true;
+  },true);
+  function end(e,cancelled){
+    if(!g||e.pointerId!==g.id) return;
+    var s=g; g=null;
+    s.x=e.clientX||s.x; s.y=e.clientY||s.y;
+    var dx=s.x-s.x0, dy=s.y-s.y0, dt=performance.now()-s.t0;
+    var tap=!cancelled&&Math.hypot(dx,dy)<10&&dt<600;
+    var swipe=Math.abs(dx)>=14&&Math.abs(dx)>Math.abs(dy);
+    if(!tap&&!swipe) return;
+    setTimeout(function(){
+      var target=nearest(s.x); if(!target) return;
+      var now=lg.querySelector('.nb.on');
+      if(tap){ if(now!==s.on0||target.classList.contains('on')) return; }          // 原逻辑已经切换了
+      else   { if(s.thMoved||now!==s.on0||target.classList.contains('on')) return; } // 滑块动过 / 标签变过：不补
+      target.click();
+    },140);
+  }
+  window.addEventListener('pointerup',function(e){end(e,false)},true);
+  window.addEventListener('pointercancel',function(e){end(e,true)},true);
+})();
+</script>
+
+
+<!-- ===== 顶部输入栏（新建文件包 / 改文字，取消 + 确认）：① 下移到 AI 灵动岛下方 ② 取消 / 确认固定在最右边，不再跟着字走 ③ 重新设计外观 =====
+     输入栏是 textbar.js 运行时生成的，index.html / style.css 里没有它的选择器，所以按内容认：固定定位、靠近顶部、同时带「取消」「确认」按钮。
+     下移用独立的 translate 属性，不动它自己的 top / transform，不影响出场动画。 -->
+<style id="tbUnderIslandCSS">
+html body .tb-under-island{translate:0 var(--tb-dy,0px)!important;transition:translate calc(.28s/var(--ui-spd,1)) cubic-bezier(.22,1,.36,1)}
+/* 外壳：磨砂玻璃 + 细描边 + 柔和投影 */
+html body .tb-bar{box-sizing:border-box!important;height:auto!important;min-height:60px;padding:9px 10px!important;border-radius:24px!important;
+  background:var(--g-fill,rgba(255,255,255,.14))!important;-webkit-backdrop-filter:var(--g-blur,blur(23px))!important;backdrop-filter:var(--g-blur,blur(23px))!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.16),0 14px 34px rgba(0,0,0,.32)!important}
+/* 一行：输入框占满中间，按钮靠右 */
+html body .tb-row{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:10px!important;box-sizing:border-box}
+html body .tb-row:not(.tb-bar){width:100%}   /* 行就是外壳本身时不能再 100%（fixed 元素的 100% 是整个屏幕宽） */
+html body .tb-fwrap,html body .tb-field{flex:1 1 0!important;min-width:0!important;width:auto!important;max-width:none!important;field-sizing:fixed!important}
+html body .tb-field{box-sizing:border-box;height:42px;margin:0!important;padding:0 14px!important;border:none!important;border-radius:15px!important;outline:none!important;
+  background:rgba(255,255,255,.1)!important;color:#fff;font-size:17px;font-weight:600;letter-spacing:.2px;line-height:42px;caret-color:#8fb0ff;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background-color .2s ease,box-shadow .2s ease}
+html body .tb-field:focus{background:rgba(255,255,255,.17)!important;box-shadow:inset 0 0 0 1.5px rgba(143,176,255,.8)}
+html body .tb-field::placeholder{color:rgba(255,255,255,.4)}
+html body .tb-grp{display:flex!important;flex:none!important;gap:8px;margin-left:auto}
+html body .tb-btn{flex:none!important;box-sizing:border-box;height:42px!important;min-width:62px;margin:0!important;padding:0 16px!important;border:none!important;border-radius:15px!important;
+  font-size:15px;font-weight:700;letter-spacing:.3px;line-height:1;white-space:nowrap;scale:1;transition:scale .35s cubic-bezier(.34,1.56,.64,1),background-color .2s ease}
+html body .tb-btn:active{scale:.94}
+html body .tb-cancel{background:rgba(255,255,255,.14)!important;color:rgba(255,255,255,.88)!important;box-shadow:none!important}
+html body .tb-ok{background:linear-gradient(180deg,#6593ff,#3f6df0)!important;color:#fff!important;box-shadow:0 4px 14px rgba(63,109,240,.5),inset 0 1px 0 rgba(255,255,255,.35)!important}
+</style>
+<script id="tbUnderIslandJS">
+(function(){
+  var bar=null, t=0, GAP=12;
+  function island(){return document.querySelector('.aiui-pill')}
+  function txt(b){return b.textContent.trim()}
+  function find(){
+    var bs=document.querySelectorAll('button');
+    for(var i=0;i<bs.length;i++){
+      if(txt(bs[i])!=='取消') continue;
+      var el=bs[i].parentElement;
+      for(var d=0;el&&el!==document.body&&d<6;d++,el=el.parentElement){
+        if(getComputedStyle(el).position!=='fixed') continue;
+        if(el.closest('#crop,#hub,#qpop,#mediaMenu')) break;
+        if(el.textContent.indexOf('确认')<0) break;
+        var r=el.getBoundingClientRect(), top=parseFloat(getComputedStyle(el).top);
+        if(r.height>0&&r.height<150&&top<260) return el;
+        break;
+      }
+    }
+    return null;
+  }
+  /* 给输入栏里的各部分打上类名，样式见上面的 CSS（只做一次） */
+  function decorate(el){
+    if(el.__tbd) return;
+    var bs=[].slice.call(el.querySelectorAll('button')), cancel=null, ok=null;
+    bs.forEach(function(b){ var s=txt(b); if(s==='取消'&&!cancel) cancel=b; else if(s==='确认'&&!ok) ok=b; });
+    if(!cancel||!ok) return;
+    var field=el.querySelector('input:not([type=hidden]):not([type=button]),textarea,[contenteditable]:not([contenteditable=false])');
+    var row=cancel.parentElement; while(row&&row!==el&&field&&!row.contains(field)) row=row.parentElement;
+    if(!row) row=el;
+    el.classList.add('tb-bar'); row.classList.add('tb-row');
+    cancel.classList.add('tb-btn','tb-cancel'); ok.classList.add('tb-btn','tb-ok');
+    if(cancel.parentElement===ok.parentElement&&cancel.parentElement!==row) cancel.parentElement.classList.add('tb-grp');
+    else { var g=cancel; while(g.parentElement&&g.parentElement!==row) g=g.parentElement; if(g===ok||g.contains(ok)) g.classList.add('tb-grp'); else cancel.style.marginLeft='auto'; }
+    if(field){
+      field.classList.add('tb-field');
+      var w=field; while(w.parentElement&&w.parentElement!==row) w=w.parentElement;
+      if(w!==field) w.classList.add('tb-fwrap');
+    }
+    el.__tbd=1;
+  }
+  function run(){
+    if(!bar||!bar.isConnected){ if(bar) bar.classList.remove('tb-under-island'); bar=find(); }
+    if(!bar) return;
+    decorate(bar);
+    var pill=island(); if(!pill) return;
+    var top=parseFloat(getComputedStyle(bar).top);
+    if(isNaN(top)) return;
+    var dy=Math.max(0,Math.round(pill.getBoundingClientRect().bottom+GAP-top));   // 输入栏上沿要落在灵动岛下沿 + 间隙
+    bar.style.setProperty('--tb-dy',dy+'px');
+    bar.classList.toggle('tb-under-island',dy>0);
+  }
+  function soon(){ if(t) return; t=setTimeout(function(){t=0;run()},120); }
+  new MutationObserver(soon).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','hidden']});
+  ['click','focusin','pointerup'].forEach(function(n){document.addEventListener(n,function(){setTimeout(run,30);setTimeout(run,380)},true)});
+  window.addEventListener('resize',soon);
+})();
+</script>
+
 </body>
 </html>

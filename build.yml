@@ -1,0 +1,55 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: |
+          brew install xcodegen
+
+      - name: Generate Xcode project
+        run: |
+          xcodegen generate --spec project.yml
+
+      - name: Build unsigned app
+        run: |
+          xcodebuild \
+            -project TextDisplay.xcodeproj \
+            -scheme TextDisplay \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package IPA
+        run: |
+          mkdir -p output/Payload
+          ls -la build/Build/Products/Release-iphoneos
+          cp -R build/Build/Products/Release-iphoneos/*.app output/Payload/TextDisplay.app
+          cd output
+          /usr/bin/zip -qry TextDisplay-unsigned.ipa Payload
+          rm -rf Payload
+          ls -la
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: TextDisplay-unsigned-ipa
+          path: output/TextDisplay-unsigned.ipa
